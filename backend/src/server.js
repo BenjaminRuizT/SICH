@@ -20,6 +20,7 @@ app.use('/api/herramientas', require('./routes/herramientas'));
 app.use('/api/revisiones', require('./routes/revisiones'));
 app.use('/api/usuarios', require('./routes/appUsers'));
 app.use('/api/exportar', require('./routes/exportar'));
+app.use('/api/admin', require('./routes/admin'));
 
 app.get('/api/config', async (req, res) => {
   const pool = require('./db');

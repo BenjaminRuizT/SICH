@@ -9,6 +9,8 @@ import AdminPanel from './pages/admin/AdminPanel';
 import Usuarios from './pages/admin/Usuarios';
 import Empleados from './pages/admin/Empleados';
 import ImportarDatos from './pages/admin/ImportarDatos';
+import SinValidar from './pages/admin/SinValidar';
+import ResetApp from './pages/admin/ResetApp';
 import CartaResponsivaAuto from './pages/CartaResponsivaAuto';
 import CartaResponsivaEquipo from './pages/CartaResponsivaEquipo';
 
@@ -34,7 +36,9 @@ function AppRoutes() {
       <Route path="/admin/usuarios" element={<AuthGuard adminOnly><Usuarios /></AuthGuard>} />
       <Route path="/admin/empleados" element={<AuthGuard adminOnly><Empleados /></AuthGuard>} />
       <Route path="/admin/importar" element={<AuthGuard adminOnly><ImportarDatos /></AuthGuard>} />
-      {/* Cartas responsivas — print pages, no sidebar */}
+      <Route path="/admin/sin-validar" element={<AuthGuard adminOnly><SinValidar /></AuthGuard>} />
+      <Route path="/admin/reset" element={<AuthGuard adminOnly><ResetApp /></AuthGuard>} />
+      {/* Cartas responsivas — print pages, sin sidebar */}
       <Route path="/carta/auto/:id" element={<AuthGuard noLayout><CartaResponsivaAuto /></AuthGuard>} />
       <Route path="/carta/equipo/:id" element={<AuthGuard noLayout><CartaResponsivaEquipo /></AuthGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
