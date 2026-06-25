@@ -1,10 +1,13 @@
+[variables]
+NODE_ENV = "development"
+
 [phases.setup]
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = [
-  "cd frontend && npm install --include=dev",
-  "cd backend && npm install --include=dev"
+  "cd frontend && npm install",
+  "cd backend && npm install"
 ]
 
 [phases.build]
