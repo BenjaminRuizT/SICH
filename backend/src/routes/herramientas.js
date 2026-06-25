@@ -56,6 +56,14 @@ router.post('/import', requireAdmin, async (req, res) => {
         [tipo, codigo_barras, no_activo, marca, modelo, anio, serie,
          descripcion_maf, plaza, plaza_desc, empId, asignado_a_raw, desc_puesto]
       );
+      // Actualizar empleado_id en registros ya existentes (re-import)
+      if (empId && no_activo) {
+        await pool.query(
+          `UPDATE herramientas SET empleado_id=$1, asignado_a_raw=$2
+           WHERE no_activo=$3 AND empleado_id IS NULL`,
+          [empId, asignado_a_raw, no_activo]
+        );
+      }
       count++;
     }
     res.json({ ok: true, count });
