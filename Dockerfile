@@ -12,4 +12,4 @@ RUN cd backend && npm install --omit=dev
 COPY backend ./backend
 COPY --from=build /app/frontend/dist ./frontend/dist
 EXPOSE 3001
-CMD ["sh", "-c", "node backend/src/migrate.js && node backend/src/server.js"]
+CMD ["node", "backend/src/server.js"]

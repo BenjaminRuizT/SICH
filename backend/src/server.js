@@ -38,4 +38,16 @@ if (isProd) {
 }
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`SICH backend en :${PORT}`));
+
+async function start() {
+  if (isProd) {
+    const migrate = require('./migrate');
+    await migrate();
+  }
+  app.listen(PORT, () => console.log(`SICH backend listo en :${PORT}`));
+}
+
+start().catch(err => {
+  console.error('Error fatal al iniciar SICH:', err);
+  process.exit(1);
+});
