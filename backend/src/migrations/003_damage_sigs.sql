@@ -4,6 +4,7 @@ ALTER TABLE revision_auto
   ADD COLUMN IF NOT EXISTS firma_auditor TEXT;
 
 ALTER TABLE revision_equipo
+  ADD COLUMN IF NOT EXISTS danos JSONB DEFAULT '[]',
   ADD COLUMN IF NOT EXISTS firma_empleado TEXT,
   ADD COLUMN IF NOT EXISTS firma_auditor TEXT;
 

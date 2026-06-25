@@ -241,7 +241,8 @@ def procesar_herramientas(empleados):
             if not marca_raw and modelo_raw and modelo_raw.upper().startswith('HP'):
                 marca_raw = 'HP'
                 modelo_raw = modelo_raw[3:].strip()
-            marca = marca_raw.title() if marca_raw else ''
+            BRAND_CASE = {'HP': 'HP', 'DELL': 'Dell', 'APPLE': 'Apple', 'LENOVO': 'Lenovo', 'ASUS': 'Asus'}
+            marca = BRAND_CASE.get(marca_raw.upper(), marca_raw.title()) if marca_raw else ''
             modelo = modelo_raw if modelo_raw else ''
 
         # Intentar linkear empleado por nombre
