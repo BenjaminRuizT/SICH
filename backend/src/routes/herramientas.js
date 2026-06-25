@@ -28,21 +28,33 @@ router.get('/cb/:cb', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Importar herramientas desde JSON (admin) — con normalización de autos
+// Importar herramientas desde JSON (admin)
+// Acepta numero_empleado_asignado para auto-linkear a empleado por número
 router.post('/import', requireAdmin, async (req, res) => {
   try {
     const { herramientas } = req.body;
     let count = 0;
     for (const h of herramientas) {
       const { tipo, codigo_barras, no_activo, marca, modelo, anio, serie,
-              descripcion_maf, plaza, plaza_desc, asignado_a_raw, desc_puesto, empleado_id } = h;
+              descripcion_maf, plaza, plaza_desc, asignado_a_raw, desc_puesto,
+              empleado_id, numero_empleado_asignado } = h;
+
+      let empId = empleado_id || null;
+      if (!empId && numero_empleado_asignado) {
+        const { rows } = await pool.query(
+          'SELECT id FROM empleados WHERE numero_empleado=$1 LIMIT 1',
+          [String(numero_empleado_asignado)]
+        );
+        if (rows[0]) empId = rows[0].id;
+      }
+
       await pool.query(
         `INSERT INTO herramientas(tipo,codigo_barras,no_activo,marca,modelo,anio,serie,
            descripcion_maf,plaza,plaza_desc,empleado_id,asignado_a_raw,desc_puesto)
          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT DO NOTHING`,
         [tipo, codigo_barras, no_activo, marca, modelo, anio, serie,
-         descripcion_maf, plaza, plaza_desc, empleado_id || null, asignado_a_raw, desc_puesto]
+         descripcion_maf, plaza, plaza_desc, empId, asignado_a_raw, desc_puesto]
       );
       count++;
     }

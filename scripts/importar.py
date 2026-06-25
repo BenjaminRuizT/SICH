@@ -261,18 +261,14 @@ def procesar_herramientas(empleados):
             'plaza_desc': plaza_desc,
             'asignado_a_raw': desc_adicional,
             'desc_puesto': desc_puesto,
-            '_emp_num': emp_num,  # Solo para referencia, se ignora en el import
+            'numero_empleado_asignado': emp_num,  # La API lo usa para linkear empleado_id
         })
 
     autos = sum(1 for h in herramientas if h['tipo'] == 'auto')
     laptops = sum(1 for h in herramientas if h['tipo'] != 'auto')
-    linked = sum(1 for h in herramientas if h['_emp_num'])
+    linked = sum(1 for h in herramientas if h['numero_empleado_asignado'])
     print(f"  → {len(herramientas)} herramientas ({autos} autos, {laptops} laptops/cómputo)")
     print(f"  → {linked} vinculadas a empleado por nombre")
-
-    # Limpiar campo de uso interno
-    for h in herramientas:
-        del h['_emp_num']
 
     return herramientas
 

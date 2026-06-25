@@ -54,7 +54,7 @@ router.get('/', requireAdmin, async (req, res) => {
     if (search) { params.push(`%${search}%`); q += ` AND (numero_empleado ILIKE $${params.length} OR nombre_completo ILIKE $${params.length})`; }
     if (plaza) { params.push(plaza); q += ` AND plaza=$${params.length}`; }
     if (departamento) { params.push(departamento); q += ` AND departamento=$${params.length}`; }
-    q += ' ORDER BY nombre_completo LIMIT 200';
+    q += ' ORDER BY nombre_completo LIMIT 1000';
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
