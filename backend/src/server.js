@@ -38,4 +38,4 @@ if (isProd) {
 }
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`SICHE backend en :${PORT}`));
+app.listen(PORT, () => console.log(`SICH backend en :${PORT}`));
