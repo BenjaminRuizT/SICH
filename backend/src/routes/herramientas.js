@@ -1,0 +1,53 @@
+const router = require('express').Router();
+const pool = require('../db');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+
+// Herramientas asignadas a un empleado
+router.get('/empleado/:empleadoId', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT h.*, e.nombre_completo as empleado_nombre
+       FROM herramientas h
+       LEFT JOIN empleados e ON h.empleado_id = e.id
+       WHERE h.empleado_id=$1 AND h.is_active=true
+       ORDER BY h.tipo, h.marca`,
+      [req.params.empleadoId]
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Buscar por código de barras
+router.get('/cb/:cb', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM herramientas WHERE codigo_barras=$1 AND is_active=true LIMIT 1',
+      [req.params.cb.trim()]
+    );
+    res.json(rows[0] || null);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Importar herramientas desde JSON (admin) — con normalización de autos
+router.post('/import', requireAdmin, async (req, res) => {
+  try {
+    const { herramientas } = req.body;
+    let count = 0;
+    for (const h of herramientas) {
+      const { tipo, codigo_barras, no_activo, marca, modelo, anio, serie,
+              descripcion_maf, plaza, plaza_desc, asignado_a_raw, desc_puesto, empleado_id } = h;
+      await pool.query(
+        `INSERT INTO herramientas(tipo,codigo_barras,no_activo,marca,modelo,anio,serie,
+           descripcion_maf,plaza,plaza_desc,empleado_id,asignado_a_raw,desc_puesto)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         ON CONFLICT DO NOTHING`,
+        [tipo, codigo_barras, no_activo, marca, modelo, anio, serie,
+         descripcion_maf, plaza, plaza_desc, empleado_id || null, asignado_a_raw, desc_puesto]
+      );
+      count++;
+    }
+    res.json({ ok: true, count });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+module.exports = router;
