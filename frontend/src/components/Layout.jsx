@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useInactivity from '../hooks/useInactivity';
+import useVersionCheck from '../hooks/useVersionCheck';
 import { APP_VERSION } from '../version';
 
 const NAV_AUDITOR = [
@@ -91,9 +92,22 @@ export default function Layout({ children }) {
   }, []);
 
   useInactivity(async () => { await logout(); navigate('/login'); });
+  const updateAvailable = useVersionCheck();
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Update banner */}
+      {updateAvailable && (
+        <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
+          <span>🔄 Nueva versión disponible</span>
+          <button
+            onClick={() => window.location.reload(true)}
+            className="bg-amber-900 text-amber-50 px-4 py-1 rounded-lg hover:bg-amber-800 transition-colors text-xs font-bold"
+          >
+            Actualizar ahora
+          </button>
+        </div>
+      )}
       {/* Top bar */}
       <header className="bg-brand-900 text-white sticky top-0 z-40 shadow-lg">
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between">
