@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import api from '../context/AuthContext';
 import PhotoCapture from '../components/PhotoCapture';
 import SignatureCanvas from '../components/SignatureCanvas';
+import DamagePanel from '../components/DamagePanel';
 
 const PASOS = ['Empleado','Confirmar datos','Herramientas','Revisión auto','Revisión equipo','Resumen'];
+
+const AUTO_MODELS = ['Aveo', 'Avanza', 'Versa', 'BYD Dolphin'];
 
 export default function NuevaRevision() {
   const navigate = useNavigate();
@@ -18,9 +21,19 @@ export default function NuevaRevision() {
   const [revisarEquipo, setRevisarEquipo] = useState(false);
   const [autoSelec, setAutoSelec] = useState(null);
   const [equipoSelec, setEquipoSelec] = useState(null);
-  const [autoForm, setAutoForm] = useState({ no_serie:'', placas:'', codigo_barras:'', kilometraje:'', poliza_seguro:'', licencia_numero:'', llanta_refaccion:null, comentarios:'', foto_condiciones:[], foto_licencia:null, foto_tarjeta_circulacion:null, firma_carta_responsiva:null });
-  const [equipoForm, setEquipoForm] = useState({ codigo_barras:'', marca:'', modelo:'', serie:'', foto_equipo:null, comentarios:'' });
+  const [autoForm, setAutoForm] = useState({
+    no_serie: '', placas: '', codigo_barras: '', kilometraje: '',
+    poliza_seguro: '', licencia_numero: '', llanta_refaccion: null, comentarios: '',
+    foto_condiciones: [], foto_licencia: null, foto_tarjeta_circulacion: null,
+    danos: [], firma_empleado: null, firma_auditor: null,
+  });
+  const [equipoForm, setEquipoForm] = useState({
+    codigo_barras: '', marca: '', modelo: '', serie: '',
+    foto_equipo: null, comentarios: '',
+    danos: [], firma_empleado: null, firma_auditor: null,
+  });
   const [sending, setSending] = useState(false);
+  const [savedId, setSavedId] = useState(null);
   const [config, setConfig] = useState({});
 
   useEffect(() => {
@@ -41,8 +54,16 @@ export default function NuevaRevision() {
     setHerramientas(h.data);
     const autos = h.data.filter(x => x.tipo === 'auto');
     const equipos = h.data.filter(x => x.tipo !== 'auto');
-    if (autos.length) { setRevisarAuto(true); setAutoSelec(autos[0]); setAutoForm(f => ({ ...f, no_serie: autos[0].serie || '', placas: '', codigo_barras: autos[0].codigo_barras || '' })); }
-    if (equipos.length) { setRevisarEquipo(true); setEquipoSelec(equipos[0]); setEquipoForm(f => ({ ...f, codigo_barras: equipos[0].codigo_barras || '', marca: equipos[0].marca || '', modelo: equipos[0].modelo || '', serie: equipos[0].serie || '' })); }
+    if (autos.length) {
+      setRevisarAuto(true);
+      setAutoSelec(autos[0]);
+      setAutoForm(f => ({ ...f, no_serie: autos[0].serie || '', placas: '', codigo_barras: autos[0].codigo_barras || '' }));
+    }
+    if (equipos.length) {
+      setRevisarEquipo(true);
+      setEquipoSelec(equipos[0]);
+      setEquipoForm(f => ({ ...f, codigo_barras: equipos[0].codigo_barras || '', marca: equipos[0].marca || '', modelo: equipos[0].modelo || '', serie: equipos[0].serie || '' }));
+    }
     setResultados([]);
     setQuery('');
     setPaso(1);
@@ -75,14 +96,14 @@ export default function NuevaRevision() {
   const enviar = async () => {
     setSending(true);
     try {
-      await api.post('/revisiones', {
+      const res = await api.post('/revisiones', {
         empleado_id: empleado.id,
         empleado_snapshot: editEmpleado,
         observaciones: '',
         auto: revisarAuto ? { ...autoForm, herramienta_id: autoSelec?.id, herramienta_snapshot: autoSelec } : null,
         equipo: revisarEquipo ? { ...equipoForm, herramienta_id: equipoSelec?.id, herramienta_snapshot: equipoSelec } : null,
       });
-      navigate('/historial', { state: { success: true } });
+      setSavedId(res.data.id);
     } catch (e) {
       alert('Error al guardar: ' + (e.response?.data?.error || e.message));
     } finally { setSending(false); }
@@ -90,6 +111,39 @@ export default function NuevaRevision() {
 
   const deptos = config.departamentos || [];
   const plazas = config.plazas || [];
+
+  // If saved, show success + carta links
+  if (savedId) {
+    return (
+      <div className="md:ml-56 max-w-2xl">
+        <div className="card text-center space-y-4">
+          <div className="text-5xl">✅</div>
+          <h2 className="text-xl font-bold text-gray-900">Revisión guardada</h2>
+          <p className="text-gray-500 text-sm">ID de revisión: <strong>#{savedId}</strong></p>
+          <div className="flex flex-col gap-2">
+            {revisarAuto && (
+              <a href={`/carta/auto/${savedId}`} target="_blank" rel="noreferrer"
+                className="btn-primary">
+                🚗 Ver / Imprimir Carta Compromiso (Auto)
+              </a>
+            )}
+            {revisarEquipo && (
+              <a href={`/carta/equipo/${savedId}`} target="_blank" rel="noreferrer"
+                className="btn-primary">
+                💻 Ver / Imprimir Carta Responsiva (Equipo)
+              </a>
+            )}
+            <button onClick={() => navigate('/historial')} className="btn-secondary">
+              Ver historial
+            </button>
+            <button onClick={() => navigate('/nueva')} className="text-sm text-brand-600 hover:underline">
+              + Nueva revisión
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="md:ml-56 max-w-2xl">
@@ -177,13 +231,10 @@ export default function NuevaRevision() {
       {paso === 2 && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold">Herramientas a revisar</h2>
-          {herramientas.length > 0 ? (
-            <p className="text-sm text-gray-500">Herramientas asignadas en el sistema (se pueden modificar)</p>
-          ) : (
-            <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">No hay herramientas registradas para este empleado en el MAF. Puedes capturar información manualmente.</p>
-          )}
-
-          {/* Auto */}
+          {herramientas.length > 0
+            ? <p className="text-sm text-gray-500">Herramientas asignadas en el sistema</p>
+            : <p className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">No hay herramientas registradas para este empleado. Puedes capturar información manualmente.</p>
+          }
           <div className={`card border-2 cursor-pointer transition-colors ${revisarAuto ? 'border-brand-500 bg-brand-50' : 'border-gray-200'}`}
             onClick={() => setRevisarAuto(v => !v)}>
             <div className="flex items-center gap-3">
@@ -192,14 +243,12 @@ export default function NuevaRevision() {
               </div>
               <div>
                 <p className="font-semibold">🚗 Automóvil</p>
-                {autoSelec ? (
-                  <p className="text-xs text-gray-500">{autoSelec.marca} {autoSelec.modelo} {autoSelec.anio} · CB: {autoSelec.codigo_barras}</p>
-                ) : <p className="text-xs text-gray-400">Captura manual</p>}
+                {autoSelec
+                  ? <p className="text-xs text-gray-500">{autoSelec.marca} {autoSelec.modelo} {autoSelec.anio} · CB: {autoSelec.codigo_barras}</p>
+                  : <p className="text-xs text-gray-400">Captura manual</p>}
               </div>
             </div>
           </div>
-
-          {/* Equipo */}
           <div className={`card border-2 cursor-pointer transition-colors ${revisarEquipo ? 'border-brand-500 bg-brand-50' : 'border-gray-200'}`}
             onClick={() => setRevisarEquipo(v => !v)}>
             <div className="flex items-center gap-3">
@@ -208,18 +257,15 @@ export default function NuevaRevision() {
               </div>
               <div>
                 <p className="font-semibold">💻 Equipo de cómputo</p>
-                {equipoSelec ? (
-                  <p className="text-xs text-gray-500">{equipoSelec.marca} {equipoSelec.modelo} · CB: {equipoSelec.codigo_barras}</p>
-                ) : <p className="text-xs text-gray-400">Captura manual</p>}
+                {equipoSelec
+                  ? <p className="text-xs text-gray-500">{equipoSelec.marca} {equipoSelec.modelo} · CB: {equipoSelec.codigo_barras}</p>
+                  : <p className="text-xs text-gray-400">Captura manual</p>}
               </div>
             </div>
           </div>
-
           <div className="flex gap-3">
             <button onClick={() => setPaso(1)} className="btn-secondary flex-1">Atrás</button>
-            <button onClick={finalizarPasos} disabled={!revisarAuto && !revisarEquipo} className="btn-primary flex-1">
-              Continuar
-            </button>
+            <button onClick={finalizarPasos} disabled={!revisarAuto && !revisarEquipo} className="btn-primary flex-1">Continuar</button>
           </div>
         </div>
       )}
@@ -234,13 +280,27 @@ export default function NuevaRevision() {
               <p className="text-gray-500">Serie: {autoSelec.serie || '—'}</p>
             </div>
           )}
-          {[['no_serie','No. de Serie'],['placas','Placas'],['codigo_barras','Código de Barras'],['kilometraje','Kilometraje'],['poliza_seguro','Póliza de Seguro'],['licencia_numero','No. Licencia']].map(([k,lbl]) => (
+
+          {/* Auto fields */}
+          <div>
+            <label className="label">Modelo del auto</label>
+            <select className="input" value={autoForm.no_modelo || ''} onChange={e => setAutoForm(p => ({ ...p, no_modelo: e.target.value }))}>
+              <option value="">Seleccionar modelo...</option>
+              {AUTO_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          {[['no_serie','No. de Serie'],['placas','Placas'],['codigo_barras','Código de Barras'],['poliza_seguro','Póliza de Seguro'],['licencia_numero','No. Licencia']].map(([k,lbl]) => (
             <div key={k}>
               <label className="label">{lbl}</label>
-              <input className="input" type={k === 'kilometraje' ? 'number' : 'text'}
-                value={autoForm[k]} onChange={e => setAutoForm(p => ({ ...p, [k]: e.target.value }))} />
+              <input className="input" type="text" value={autoForm[k]}
+                onChange={e => setAutoForm(p => ({ ...p, [k]: e.target.value }))} />
             </div>
           ))}
+          <div>
+            <label className="label">Kilometraje</label>
+            <input className="input" type="number" value={autoForm.kilometraje}
+              onChange={e => setAutoForm(p => ({ ...p, kilometraje: e.target.value }))} />
+          </div>
           <div>
             <label className="label">Llanta de refacción</label>
             <div className="flex gap-3">
@@ -253,15 +313,31 @@ export default function NuevaRevision() {
               ))}
             </div>
           </div>
+
+          {/* Damage panel */}
+          <div className="card">
+            <p className="label mb-3">Panel de daños — Auto</p>
+            <DamagePanel type="auto" value={autoForm.danos} onChange={v => setAutoForm(p => ({ ...p, danos: v }))} />
+          </div>
+
+          {/* Photos */}
           <PhotoCapture label="Fotos de condiciones del auto" multiple onCapture={v => setAutoForm(p => ({ ...p, foto_condiciones: v }))} value={autoForm.foto_condiciones} />
           <PhotoCapture label="Foto de licencia de conducir" onCapture={v => setAutoForm(p => ({ ...p, foto_licencia: v }))} value={autoForm.foto_licencia ? [autoForm.foto_licencia] : []} />
           <PhotoCapture label="Foto de tarjeta de circulación" onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))} value={autoForm.foto_tarjeta_circulacion ? [autoForm.foto_tarjeta_circulacion] : []} />
-          <SignatureCanvas label="Firma carta responsiva" onSave={v => setAutoForm(p => ({ ...p, firma_carta_responsiva: v }))} />
+
           <div>
             <label className="label">Comentarios</label>
             <textarea className="input min-h-[80px] resize-none" value={autoForm.comentarios}
               onChange={e => setAutoForm(p => ({ ...p, comentarios: e.target.value }))} />
           </div>
+
+          {/* Dual signatures */}
+          <div className="card space-y-4">
+            <p className="font-semibold text-sm text-gray-700">Firmas para carta compromiso</p>
+            <SignatureCanvas label="Firma del empleado" onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
+            <SignatureCanvas label="Firma del auditor / RH" onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
+          </div>
+
           <div className="flex gap-3">
             <button onClick={() => setPaso(2)} className="btn-secondary flex-1">Atrás</button>
             <button onClick={finalizarPasos} className="btn-primary flex-1">Continuar</button>
@@ -280,12 +356,27 @@ export default function NuevaRevision() {
                 onChange={e => setEquipoForm(p => ({ ...p, [k]: e.target.value }))} />
             </div>
           ))}
+
+          {/* Damage panel */}
+          <div className="card">
+            <p className="label mb-3">Panel de daños — Equipo</p>
+            <DamagePanel type="laptop" value={equipoForm.danos} onChange={v => setEquipoForm(p => ({ ...p, danos: v }))} />
+          </div>
+
           <PhotoCapture label="Foto del equipo" onCapture={v => setEquipoForm(p => ({ ...p, foto_equipo: v }))} value={equipoForm.foto_equipo ? [equipoForm.foto_equipo] : []} />
           <div>
             <label className="label">Comentarios</label>
             <textarea className="input min-h-[80px] resize-none" value={equipoForm.comentarios}
               onChange={e => setEquipoForm(p => ({ ...p, comentarios: e.target.value }))} />
           </div>
+
+          {/* Dual signatures */}
+          <div className="card space-y-4">
+            <p className="font-semibold text-sm text-gray-700">Firmas para carta responsiva</p>
+            <SignatureCanvas label="Firma del empleado" onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
+            <SignatureCanvas label="Firma del auditor / ATI" onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+          </div>
+
           <div className="flex gap-3">
             <button onClick={() => setPaso(revisarAuto ? 3 : 2)} className="btn-secondary flex-1">Atrás</button>
             <button onClick={() => setPaso(5)} className="btn-primary flex-1">Continuar</button>
@@ -314,11 +405,13 @@ export default function NuevaRevision() {
                 <span>Póliza: <b>{autoForm.poliza_seguro || '—'}</b></span>
                 <span>Licencia: <b>{autoForm.licencia_numero || '—'}</b></span>
               </div>
-              <div className="flex gap-2 text-xs">
-                {autoForm.foto_condiciones?.length > 0 && <span className="text-green-600">✓ {autoForm.foto_condiciones.length} foto(s) condiciones</span>}
+              <div className="flex flex-wrap gap-2 text-xs">
+                {autoForm.foto_condiciones?.length > 0 && <span className="text-green-600">✓ {autoForm.foto_condiciones.length} foto(s)</span>}
                 {autoForm.foto_licencia && <span className="text-green-600">✓ Foto licencia</span>}
-                {autoForm.foto_tarjeta_circulacion && <span className="text-green-600">✓ Foto tarjeta circ.</span>}
-                {autoForm.firma_carta_responsiva && <span className="text-green-600">✓ Firma capturada</span>}
+                {autoForm.foto_tarjeta_circulacion && <span className="text-green-600">✓ Tarjeta circ.</span>}
+                {autoForm.danos.length > 0 && <span className="text-orange-600">⚠ {autoForm.danos.length} daño(s)</span>}
+                {autoForm.firma_empleado && <span className="text-green-600">✓ Firma empleado</span>}
+                {autoForm.firma_auditor && <span className="text-green-600">✓ Firma auditor</span>}
               </div>
             </div>
           )}
@@ -331,7 +424,12 @@ export default function NuevaRevision() {
                 <span>Modelo: <b>{equipoForm.modelo || '—'}</b></span>
                 <span>Serie: <b>{equipoForm.serie || '—'}</b></span>
               </div>
-              {equipoForm.foto_equipo && <span className="text-xs text-green-600">✓ Foto capturada</span>}
+              <div className="flex flex-wrap gap-2 text-xs">
+                {equipoForm.foto_equipo && <span className="text-green-600">✓ Foto</span>}
+                {equipoForm.danos.length > 0 && <span className="text-orange-600">⚠ {equipoForm.danos.length} daño(s)</span>}
+                {equipoForm.firma_empleado && <span className="text-green-600">✓ Firma empleado</span>}
+                {equipoForm.firma_auditor && <span className="text-green-600">✓ Firma auditor</span>}
+              </div>
             </div>
           )}
           <div className="flex gap-3">

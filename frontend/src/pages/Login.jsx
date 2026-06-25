@@ -29,7 +29,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/20 mb-4">
             <span className="text-4xl">🔧</span>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">SICHE</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">SICH</h1>
           <p className="text-brand-300 text-sm mt-1">Sistema Integral de Control de Herramienta</p>
         </div>
 

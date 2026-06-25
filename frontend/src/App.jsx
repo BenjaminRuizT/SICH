@@ -9,12 +9,15 @@ import AdminPanel from './pages/admin/AdminPanel';
 import Usuarios from './pages/admin/Usuarios';
 import Empleados from './pages/admin/Empleados';
 import ImportarDatos from './pages/admin/ImportarDatos';
+import CartaResponsivaAuto from './pages/CartaResponsivaAuto';
+import CartaResponsivaEquipo from './pages/CartaResponsivaEquipo';
 
-function AuthGuard({ children, adminOnly = false }) {
+function AuthGuard({ children, adminOnly = false, noLayout = false }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-brand-600 text-lg">Cargando...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && user.rol !== 'admin') return <Navigate to="/" replace />;
+  if (noLayout) return <>{children}</>;
   return <Layout>{children}</Layout>;
 }
 
@@ -31,6 +34,9 @@ function AppRoutes() {
       <Route path="/admin/usuarios" element={<AuthGuard adminOnly><Usuarios /></AuthGuard>} />
       <Route path="/admin/empleados" element={<AuthGuard adminOnly><Empleados /></AuthGuard>} />
       <Route path="/admin/importar" element={<AuthGuard adminOnly><ImportarDatos /></AuthGuard>} />
+      {/* Cartas responsivas — print pages, no sidebar */}
+      <Route path="/carta/auto/:id" element={<AuthGuard noLayout><CartaResponsivaAuto /></AuthGuard>} />
+      <Route path="/carta/equipo/:id" element={<AuthGuard noLayout><CartaResponsivaEquipo /></AuthGuard>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

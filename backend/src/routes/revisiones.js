@@ -21,25 +21,30 @@ router.post('/', requireAuth, async (req, res) => {
       await client.query(
         `INSERT INTO revision_auto(revision_id,herramienta_id,herramienta_snapshot,no_serie,placas,
            codigo_barras,kilometraje,poliza_seguro,licencia_numero,llanta_refaccion,comentarios,
-           foto_condiciones,foto_licencia,foto_tarjeta_circulacion,firma_carta_responsiva)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+           foto_condiciones,foto_licencia,foto_tarjeta_circulacion,
+           danos,firma_empleado,firma_auditor)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
         [rev.id, auto.herramienta_id || null, JSON.stringify(auto.herramienta_snapshot || {}),
          auto.no_serie, auto.placas, auto.codigo_barras, auto.kilometraje,
          auto.poliza_seguro, auto.licencia_numero, auto.llanta_refaccion,
          auto.comentarios, JSON.stringify(auto.foto_condiciones || []),
          auto.foto_licencia || null, auto.foto_tarjeta_circulacion || null,
-         auto.firma_carta_responsiva || null]
+         JSON.stringify(auto.danos || []),
+         auto.firma_empleado || null, auto.firma_auditor || null]
       );
     }
 
     if (equipo) {
       await client.query(
         `INSERT INTO revision_equipo(revision_id,herramienta_id,herramienta_snapshot,
-           codigo_barras,marca,modelo,serie,foto_equipo,comentarios)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+           codigo_barras,marca,modelo,serie,foto_equipo,comentarios,
+           danos,firma_empleado,firma_auditor)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
         [rev.id, equipo.herramienta_id || null, JSON.stringify(equipo.herramienta_snapshot || {}),
          equipo.codigo_barras, equipo.marca, equipo.modelo, equipo.serie,
-         equipo.foto_equipo || null, equipo.comentarios || null]
+         equipo.foto_equipo || null, equipo.comentarios || null,
+         JSON.stringify(equipo.danos || []),
+         equipo.firma_empleado || null, equipo.firma_auditor || null]
       );
     }
 
@@ -73,10 +78,13 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Detalle revisión
+// Detalle revisión (incluyendo firmas y daños para carta responsiva)
 router.get('/:id', requireAuth, async (req, res) => {
   try {
-    const rev = await pool.query('SELECT r.*, e.nombre_completo, e.numero_empleado FROM revisiones r LEFT JOIN empleados e ON r.empleado_id=e.id WHERE r.id=$1', [req.params.id]);
+    const rev = await pool.query(
+      `SELECT r.*, e.nombre_completo, e.numero_empleado
+       FROM revisiones r LEFT JOIN empleados e ON r.empleado_id=e.id
+       WHERE r.id=$1`, [req.params.id]);
     if (!rev.rows[0]) return res.status(404).json({ error: 'No encontrada' });
     const autoR = await pool.query('SELECT * FROM revision_auto WHERE revision_id=$1', [req.params.id]);
     const equipoR = await pool.query('SELECT * FROM revision_equipo WHERE revision_id=$1', [req.params.id]);
