@@ -33,7 +33,7 @@ const THEMES = [
 
 function ThemePicker() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState(() => localStorage.getItem('sich-theme') || 'teal');
+  const [current, setCurrent] = useState(() => localStorage.getItem('sich-theme') || 'slate');
   const ref = useRef(null);
 
   useEffect(() => {
@@ -100,7 +100,7 @@ const EyeIcon = ({ open }) => open ? (
   </svg>
 );
 
-function CambiarPasswordModal({ onClose }) {
+function CambiarPasswordModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ current: '', nueva: '', confirmar: '' });
   const [show, setShow] = useState({ current: false, nueva: false, confirmar: false });
   const [error, setError] = useState('');
@@ -118,6 +118,7 @@ function CambiarPasswordModal({ onClose }) {
     try {
       await axios.put('/api/usuarios/me/password', { current_password: form.current, new_password: form.nueva });
       setOk(true);
+      setTimeout(() => onSuccess(), 2000);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al cambiar contraseña');
     } finally { setLoading(false); }
@@ -128,12 +129,11 @@ function CambiarPasswordModal({ onClose }) {
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-bold text-lg">Cambiar contraseña</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
+          {!ok && <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>}
         </div>
         {ok ? (
-          <div className="space-y-4">
-            <p className="text-green-700 bg-green-50 rounded-lg px-3 py-2 text-sm">Contraseña actualizada correctamente.</p>
-            <button onClick={onClose} className="btn-primary">Cerrar</button>
+          <div className="space-y-2">
+            <p className="text-green-700 bg-green-50 rounded-lg px-3 py-2 text-sm">Contraseña actualizada. Cerrando sesión...</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
@@ -183,7 +183,7 @@ export default function Layout({ children }) {
 
   // Restore saved theme on mount
   useEffect(() => {
-    const saved = localStorage.getItem('sich-theme') || 'teal';
+    const saved = localStorage.getItem('sich-theme') || 'slate';
     if (saved !== 'teal') document.documentElement.setAttribute('data-theme', saved);
   }, []);
 
@@ -199,7 +199,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {showPwdModal && <CambiarPasswordModal onClose={() => setShowPwdModal(false)} />}
+      {showPwdModal && <CambiarPasswordModal onClose={() => setShowPwdModal(false)} onSuccess={async () => { await logout(); navigate('/login'); }} />}
       {/* Update banner */}
       {updateAvailable && (
         <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
