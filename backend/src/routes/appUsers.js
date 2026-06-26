@@ -36,8 +36,20 @@ router.patch('/:id', requireAdmin, async (req, res) => {
 });
 
 router.delete('/:id', requireAdmin, async (req, res) => {
-  await pool.query('UPDATE app_users SET is_active=false WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
+  try {
+    const targetId = parseInt(req.params.id);
+    if (req.user.id === targetId)
+      return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
+    const { rows: [target] } = await pool.query('SELECT rol FROM app_users WHERE id=$1', [targetId]);
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (target.rol === 'admin') {
+      const { rows: admins } = await pool.query("SELECT id FROM app_users WHERE rol='admin'");
+      if (admins.length <= 1)
+        return res.status(400).json({ error: 'No se puede eliminar el único administrador' });
+    }
+    await pool.query('DELETE FROM app_users WHERE id=$1', [targetId]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
