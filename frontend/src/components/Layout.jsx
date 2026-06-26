@@ -18,17 +18,9 @@ const NAV_ADMIN = [
 ];
 
 const THEMES = [
-  { id: 'teal',     label: 'Teal',        hex: '#0f766e' },
-  { id: 'slate',    label: 'Gris',        hex: '#334155' },
-  { id: 'rose',     label: 'Rosa',        hex: '#be123c' },
-  { id: 'navy',     label: 'Azul Marina', hex: '#1e3a8a' },
-  { id: 'forest',   label: 'Verde Bosque',hex: '#166534' },
-  { id: 'burgundy', label: 'Burdeos',     hex: '#7f1d1d' },
-  { id: 'ocean',    label: 'Océano',      hex: '#0c4a6e' },
-  { id: 'espresso', label: 'Espresso',    hex: '#78350f' },
-  { id: 'steel',    label: 'Acero',       hex: '#164e63' },
-  { id: 'olive',    label: 'Verde Olivo', hex: '#3f6212' },
-  { id: 'charcoal', label: 'Carbón',      hex: '#18181b' },
+  { id: 'slate',  label: 'Gris',        hex: '#334155' },
+  { id: 'navy',   label: 'Azul Marina', hex: '#1e3a8a' },
+  { id: 'forest', label: 'Verde Bosque',hex: '#166534' },
 ];
 
 function ThemePicker() {
