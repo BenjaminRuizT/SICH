@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import useInactivity from '../hooks/useInactivity';
 import useVersionCheck from '../hooks/useVersionCheck';
@@ -88,12 +89,97 @@ function ThemePicker() {
   );
 }
 
+const EyeIcon = ({ open }) => open ? (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+) : (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+  </svg>
+);
+
+function CambiarPasswordModal({ onClose }) {
+  const [form, setForm] = useState({ current: '', nueva: '', confirmar: '' });
+  const [show, setShow] = useState({ current: false, nueva: false, confirmar: false });
+  const [error, setError] = useState('');
+  const [ok, setOk] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const toggle = (field) => setShow(s => ({ ...s, [field]: !s[field] }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (form.nueva !== form.confirmar) { setError('Las contraseñas nuevas no coinciden'); return; }
+    if (form.nueva.length < 6) { setError('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+    setLoading(true);
+    try {
+      await axios.put('/api/usuarios/me/password', { current_password: form.current, new_password: form.nueva });
+      setOk(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al cambiar contraseña');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-bold text-lg">Cambiar contraseña</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl font-bold">✕</button>
+        </div>
+        {ok ? (
+          <div className="space-y-4">
+            <p className="text-green-700 bg-green-50 rounded-lg px-3 py-2 text-sm">Contraseña actualizada correctamente.</p>
+            <button onClick={onClose} className="btn-primary">Cerrar</button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-3">
+            {[
+              { key: 'current', label: 'Contraseña actual' },
+              { key: 'nueva', label: 'Nueva contraseña' },
+              { key: 'confirmar', label: 'Confirmar nueva contraseña' },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label className="label">{label}</label>
+                <div className="relative">
+                  <input
+                    className="input pr-10"
+                    type={show[key] ? 'text' : 'password'}
+                    value={form[key]}
+                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                    required
+                  />
+                  <button type="button" onClick={() => toggle(key)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <EyeIcon open={show[key]} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {error && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+              <button type="submit" disabled={loading} className="btn-primary flex-1">
+                {loading ? 'Guardando...' : 'Cambiar'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isAdmin = user?.rol === 'admin';
   const nav = isAdmin ? NAV_ADMIN : NAV_AUDITOR;
   const [inactivityMs, setInactivityMs] = useState(20 * 60 * 1000);
+  const [showPwdModal, setShowPwdModal] = useState(false);
 
   // Restore saved theme on mount
   useEffect(() => {
@@ -113,6 +199,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {showPwdModal && <CambiarPasswordModal onClose={() => setShowPwdModal(false)} />}
       {/* Update banner */}
       {updateAvailable && (
         <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
@@ -137,7 +224,13 @@ export default function Layout({ children }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemePicker />
-            <span className="text-sm text-brand-200 hidden md:inline">{user?.nombre}</span>
+            <button
+              onClick={() => setShowPwdModal(true)}
+              title="Cambiar contraseña"
+              className="text-sm text-brand-200 hidden md:inline hover:text-white transition-colors"
+            >
+              {user?.nombre}
+            </button>
             <button
               onClick={async () => { await logout(); navigate('/login'); }}
               className="text-xs bg-brand-800 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg transition-colors"
