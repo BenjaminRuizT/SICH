@@ -1,32 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import api from '../../context/AuthContext';
 
 const TIPO_LABEL = { auto: '🚗 Auto', laptop: '💻 Laptop', computo: '🖥 Cómputo' };
 
-function exportCSV(rows) {
-  const headers = ['Tipo', 'Marca', 'Modelo', 'Año', 'No. Activo', 'Código Barras', 'Plaza', 'Empleado', 'No. Empleado'];
-  const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [
-    headers.join(','),
-    ...rows.map(i => [
-      i.tipo,
-      i.marca || '',
-      i.modelo || '',
-      i.anio || '',
-      i.no_activo || '',
-      i.codigo_barras || '',
-      i.plaza || '',
-      i.empleado_nombre || i.asignado_a_raw || '',
-      i.numero_empleado || '',
-    ].map(escape).join(',')),
-  ];
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `sin_validar_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+function exportExcel(rows) {
+  const data = rows.map(i => ({
+    'Tipo':            i.tipo,
+    'Marca':           i.marca || '',
+    'Modelo':          i.modelo || '',
+    'Año':             i.anio || '',
+    'No. Activo':      i.no_activo || '',
+    'Código Barras':   i.codigo_barras || '',
+    'Plaza':           i.plaza || '',
+    'Empleado':        i.empleado_nombre || i.asignado_a_raw || '',
+    'No. Empleado':    i.numero_empleado || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  // Ancho de columnas
+  ws['!cols'] = [10, 14, 18, 8, 14, 16, 18, 32, 14].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sin Validar');
+  XLSX.writeFile(wb, `sin_validar_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 export default function SinValidar() {
@@ -111,13 +106,13 @@ export default function SinValidar() {
         <span className="text-sm text-gray-500 self-center">{filtrados.length} registros</span>
         {filtrados.length > 0 && (
           <button
-            onClick={() => exportCSV(filtrados)}
+            onClick={() => exportExcel(filtrados)}
             className="ml-auto flex items-center gap-1.5 text-sm bg-brand-700 hover:bg-brand-800 text-white px-3 py-2 rounded-lg transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Exportar CSV
+            Exportar Excel
           </button>
         )}
       </div>
