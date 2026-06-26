@@ -62,7 +62,7 @@ export default function SinValidar() {
     <div className="md:ml-56 space-y-4">
       <div>
         <h1 className="text-xl font-bold">Herramientas sin validar</h1>
-        <p className="text-xs text-gray-400 mt-0.5">Herramientas del MAF que aún no tienen revisión registrada en SICH</p>
+        <p className="text-xs text-gray-400 mt-0.5">Herramientas del MAF que aún no tienen revisión registrada</p>
       </div>
 
       {/* Resumen */}

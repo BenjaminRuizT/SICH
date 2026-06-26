@@ -142,7 +142,7 @@ export default function CartaResponsivaEquipo() {
               <p>Folio: <strong>{folio}</strong> · Generado: {fmtFull(rev.fecha_revision)}</p>
               <p>Auditor: {nombreAuditor}</p>
               <p className="font-mono break-all">SHA-256: {hash.slice(0, 32)}...</p>
-              <p className="mt-1">Este documento fue generado digitalmente mediante el Sistema SICH de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento. Verifique en el QR adjunto.</p>
+              <p className="mt-1">Este documento fue generado digitalmente mediante el Sistema de Control de Herramienta de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento. Verifique en el QR adjunto.</p>
             </div>
           </div>
         </div>

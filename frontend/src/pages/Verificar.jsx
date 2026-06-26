@@ -36,7 +36,7 @@ export default function Verificar() {
       <div className="card max-w-sm text-center">
         <p className="text-4xl mb-4">❌</p>
         <h1 className="text-lg font-bold text-red-700">Documento no encontrado</h1>
-        <p className="text-sm text-gray-500 mt-2">El folio consultado no existe en el sistema SICH.</p>
+        <p className="text-sm text-gray-500 mt-2">El folio consultado no existe en el Sistema de Control de Herramienta.</p>
       </div>
     </div>
   );
@@ -47,7 +47,7 @@ export default function Verificar() {
         <div className="text-center">
           <div className="text-5xl mb-3">✅</div>
           <h1 className="text-xl font-bold text-green-700">Documento auténtico</h1>
-          <p className="text-sm text-gray-500 mt-1">Verificado en el Sistema SICH — Cadena Comercial OXXO</p>
+          <p className="text-sm text-gray-500 mt-1">Verificado en el Sistema de Control de Herramienta — Cadena Comercial OXXO</p>
         </div>
 
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2 text-sm">
@@ -70,7 +70,7 @@ export default function Verificar() {
         )}
 
         <p className="text-[11px] text-gray-400 text-center">
-          Este documento fue firmado digitalmente mediante SICH. Las firmas electrónicas tienen validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada.
+          Este documento fue firmado digitalmente mediante el Sistema de Control de Herramienta. Las firmas electrónicas tienen validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada.
         </p>
       </div>
     </div>
