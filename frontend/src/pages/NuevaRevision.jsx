@@ -78,12 +78,20 @@ function BarcodeSearch({ tipo, onSelect, currentCb }) {
   );
 }
 
+const MODELOS_AUTO = [
+  'Chevrolet Aveo',
+  'Nissan Versa',
+  'Chevrolet Beat',
+  'Toyota Avanza',
+  'BYD Dolphin mini',
+];
+
 const emptyAuto = {
   codigo_barras: '', no_modelo: '', no_serie: '', placas: '', kilometraje: '',
   poliza_seguro: null, licencia: null, llanta_refaccion: null, gato_cruceta: null,
   comentarios: '',
   foto_condiciones: [], foto_licencia: null, foto_licencia_reverso: null,
-  foto_tarjeta_circulacion: null,
+  foto_tarjeta_circulacion: null, foto_poliza_seguro: null,
   danos: [], firma_empleado: null, firma_auditor: null,
 };
 
@@ -134,7 +142,7 @@ export default function NuevaRevision() {
     if (autos.length) {
       setRevisarAuto(true);
       setAutoSelec(autos[0]);
-      setAutoForm(f => ({ ...f, no_serie: autos[0].serie || '', codigo_barras: autos[0].codigo_barras || '', no_modelo: autos[0].modelo || '' }));
+      setAutoForm(f => ({ ...f, no_serie: autos[0].serie || '', codigo_barras: autos[0].codigo_barras || '', no_modelo: autos[0].modelo || '', placas: autos[0].placas || '' }));
     }
     if (equipos.length) {
       setRevisarEquipo(true);
@@ -172,6 +180,7 @@ export default function NuevaRevision() {
     if (!autoForm.foto_licencia) e.foto_licencia = 'Requerida';
     if (!autoForm.foto_licencia_reverso) e.foto_licencia_reverso = 'Requerida';
     if (!autoForm.foto_tarjeta_circulacion) e.foto_tarjeta_circulacion = 'Requerida';
+    if (!autoForm.foto_poliza_seguro) e.foto_poliza_seguro = 'Requerida';
     if (!autoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
     if (!autoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
     return e;
@@ -386,6 +395,7 @@ export default function NuevaRevision() {
                 codigo_barras: item.codigo_barras || '',
                 no_modelo: item.modelo || '',
                 no_serie: item.serie || '',
+                placas: item.placas || '',
               }));
             }} />
           <Err field="codigo_barras" />
@@ -399,25 +409,34 @@ export default function NuevaRevision() {
 
           <div>
             <label className="label">Modelo del auto<span className="text-red-500 ml-1">*</span></label>
-            <input className="input" value={autoForm.no_modelo}
-              onChange={e => setAutoForm(p => ({ ...p, no_modelo: e.target.value }))}
-              placeholder="Ej. Aveo, Versa, BYD Dolphin..." />
+            <select className="input" value={autoForm.no_modelo}
+              onChange={e => setAutoForm(p => ({ ...p, no_modelo: e.target.value }))}>
+              <option value="">Seleccionar modelo...</option>
+              {MODELOS_AUTO.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
             <Err field="no_modelo" />
           </div>
 
-          {[['no_serie','No. de Serie'],['placas','Placas']].map(([k, lbl]) => (
-            <div key={k}>
-              <label className="label">{lbl}<span className="text-red-500 ml-1">*</span></label>
-              <input className="input" type="text" value={autoForm[k]}
-                onChange={e => setAutoForm(p => ({ ...p, [k]: e.target.value }))} />
-              <Err field={k} />
-            </div>
-          ))}
+          <div>
+            <label className="label">No. de Serie<span className="text-red-500 ml-1">*</span></label>
+            <input className="input" type="text" value={autoForm.no_serie}
+              onChange={e => setAutoForm(p => ({ ...p, no_serie: e.target.value }))} />
+            <Err field="no_serie" />
+          </div>
+
+          <div>
+            <label className="label">Placas<span className="text-red-500 ml-1">*</span></label>
+            <input className="input" type="text" value={autoForm.placas}
+              onChange={e => setAutoForm(p => ({ ...p, placas: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') }))}
+              placeholder="Ej. ABC123A" maxLength={10} />
+            <Err field="placas" />
+          </div>
 
           <div>
             <label className="label">Kilometraje<span className="text-red-500 ml-1">*</span></label>
-            <input className="input" type="number" value={autoForm.kilometraje}
-              onChange={e => setAutoForm(p => ({ ...p, kilometraje: e.target.value }))} />
+            <input className="input" type="text" inputMode="numeric" value={autoForm.kilometraje}
+              onChange={e => setAutoForm(p => ({ ...p, kilometraje: e.target.value.replace(/\D/g, '') }))}
+              placeholder="Ej. 25000" />
             <Err field="kilometraje" />
           </div>
 
@@ -445,27 +464,29 @@ export default function NuevaRevision() {
 
           {/* Photos */}
           <div>
-            <PhotoCapture label="Fotos de condiciones del auto" multiple
+            <PhotoCapture label="Fotos de condiciones del auto" multiple maxPhotos={5}
               onCapture={v => setAutoForm(p => ({ ...p, foto_condiciones: v }))}
               value={autoForm.foto_condiciones}
-              sublabel="Agrega todas las fotos necesarias (cámara o galería)" />
+              sublabel="Máximo 5 fotos (cámara o galería)" />
             <Err field="foto_condiciones" />
           </div>
 
           <div>
-            <PhotoCapture label="Licencia de conducir — Frente"
-              onCapture={v => setAutoForm(p => ({ ...p, foto_licencia: v }))}
-              value={autoForm.foto_licencia}
-              sublabel="Foto de la parte frontal de la licencia" />
-            <Err field="foto_licencia" />
-          </div>
-
-          <div>
-            <PhotoCapture label="Licencia de conducir — Reverso"
-              onCapture={v => setAutoForm(p => ({ ...p, foto_licencia_reverso: v }))}
-              value={autoForm.foto_licencia_reverso}
-              sublabel="Foto de la parte trasera de la licencia" />
-            <Err field="foto_licencia_reverso" />
+            <p className="label">Licencia de conducir<span className="text-red-500 ml-1">*</span></p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <PhotoCapture label="Frente"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_licencia: v }))}
+                  value={autoForm.foto_licencia} />
+                <Err field="foto_licencia" />
+              </div>
+              <div>
+                <PhotoCapture label="Reverso"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_licencia_reverso: v }))}
+                  value={autoForm.foto_licencia_reverso} />
+                <Err field="foto_licencia_reverso" />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -473,6 +494,13 @@ export default function NuevaRevision() {
               onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))}
               value={autoForm.foto_tarjeta_circulacion} />
             <Err field="foto_tarjeta_circulacion" />
+          </div>
+
+          <div>
+            <PhotoCapture label="Póliza de seguro"
+              onCapture={v => setAutoForm(p => ({ ...p, foto_poliza_seguro: v }))}
+              value={autoForm.foto_poliza_seguro} />
+            <Err field="foto_poliza_seguro" />
           </div>
 
           <div>
@@ -603,6 +631,7 @@ export default function NuevaRevision() {
                 {autoForm.foto_licencia && <span className="text-green-600">✓ Licencia frente</span>}
                 {autoForm.foto_licencia_reverso && <span className="text-green-600">✓ Licencia reverso</span>}
                 {autoForm.foto_tarjeta_circulacion && <span className="text-green-600">✓ Tarjeta circ.</span>}
+                {autoForm.foto_poliza_seguro && <span className="text-green-600">✓ Póliza seguro</span>}
                 {autoForm.danos.length > 0 && <span className="text-orange-600">⚠ {autoForm.danos.length} daño(s)</span>}
                 {autoForm.firma_empleado && <span className="text-green-600">✓ Firma empleado</span>}
                 {autoForm.firma_auditor && <span className="text-green-600">✓ Firma auditor</span>}

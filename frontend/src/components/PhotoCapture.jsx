@@ -18,7 +18,7 @@ function compressImage(file, maxPx = 1200, quality = 0.8) {
   });
 }
 
-export default function PhotoCapture({ label, onCapture, value, multiple = false, sublabel = '' }) {
+export default function PhotoCapture({ label, onCapture, value, multiple = false, sublabel = '', maxPhotos = null }) {
   const cameraRef = useRef(null);
   const galleryRef = useRef(null);
   const [previews, setPreviews] = useState(multiple ? (value || []) : (value ? [value] : []));
@@ -28,8 +28,9 @@ export default function PhotoCapture({ label, onCapture, value, multiple = false
     const compressed = await Promise.all(files.map(f => compressImage(f)));
     if (multiple) {
       const all = [...previews, ...compressed];
-      setPreviews(all);
-      onCapture(all);
+      const capped = maxPhotos ? all.slice(0, maxPhotos) : all;
+      setPreviews(capped);
+      onCapture(capped);
     } else {
       setPreviews([compressed[0]]);
       onCapture(compressed[0]);
@@ -43,12 +44,15 @@ export default function PhotoCapture({ label, onCapture, value, multiple = false
     onCapture(multiple ? next : null);
   };
 
-  const maxReached = !multiple && previews.length >= 1;
+  const maxReached = multiple
+    ? (maxPhotos !== null && previews.length >= maxPhotos)
+    : previews.length >= 1;
 
   return (
     <div className="space-y-2">
       <label className="label">{label}</label>
       {sublabel && <p className="text-xs text-gray-500 -mt-1">{sublabel}</p>}
+      {multiple && maxPhotos && <p className="text-xs text-gray-400 -mt-1">{previews.length}/{maxPhotos} fotos</p>}
       <div className="flex flex-wrap gap-2">
         {previews.map((src, i) => (
           <div key={i} className="relative">

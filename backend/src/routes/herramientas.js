@@ -34,7 +34,7 @@ router.get('/search', requireAuth, async (req, res) => {
     const { q = '', tipo } = req.query;
     if (q.length < 2) return res.json([]);
     const params = [`%${q}%`];
-    let query = `SELECT id, tipo, codigo_barras, no_activo, marca, modelo, anio, serie
+    let query = `SELECT id, tipo, codigo_barras, no_activo, marca, modelo, anio, serie, placas
                  FROM herramientas WHERE codigo_barras ILIKE $1 AND is_active=true`;
     if (tipo) { params.push(tipo); query += ` AND tipo=$${params.length}`; }
     query += ' ORDER BY codigo_barras LIMIT 10';
