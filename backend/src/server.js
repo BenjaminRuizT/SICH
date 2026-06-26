@@ -31,7 +31,7 @@ app.get('/api/config', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true, env: process.env.NODE_ENV }));
-app.get('/api/version', (req, res) => res.json({ version: '1.3.0' }));
+app.get('/api/version', (req, res) => res.json({ version: '1.4.0' }));
 
 if (isProd) {
   const dist = path.join(__dirname, '../../frontend/dist');

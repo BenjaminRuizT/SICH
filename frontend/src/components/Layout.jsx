@@ -16,11 +16,21 @@ const NAV_ADMIN = [
 ];
 
 const THEMES = [
-  { id: 'teal',   label: 'Teal',   hex: '#0f766e' },
-  { id: 'indigo', label: 'Índigo', hex: '#4338ca' },
-  { id: 'slate',  label: 'Gris',   hex: '#334155' },
-  { id: 'violet', label: 'Violeta',hex: '#6d28d9' },
-  { id: 'rose',   label: 'Rosa',   hex: '#be123c' },
+  { id: 'teal',     label: 'Teal',        hex: '#0f766e' },
+  { id: 'indigo',   label: 'Índigo',      hex: '#4338ca' },
+  { id: 'slate',    label: 'Gris',        hex: '#334155' },
+  { id: 'violet',   label: 'Violeta',     hex: '#6d28d9' },
+  { id: 'rose',     label: 'Rosa',        hex: '#be123c' },
+  { id: 'navy',     label: 'Azul Marina', hex: '#1e3a8a' },
+  { id: 'forest',   label: 'Verde Bosque',hex: '#166534' },
+  { id: 'burgundy', label: 'Burdeos',     hex: '#7f1d1d' },
+  { id: 'ocean',    label: 'Océano',      hex: '#0c4a6e' },
+  { id: 'espresso', label: 'Espresso',    hex: '#78350f' },
+  { id: 'steel',    label: 'Acero',       hex: '#164e63' },
+  { id: 'olive',    label: 'Verde Olivo', hex: '#3f6212' },
+  { id: 'plum',     label: 'Ciruela',     hex: '#701a75' },
+  { id: 'charcoal', label: 'Carbón',      hex: '#18181b' },
+  { id: 'copper',   label: 'Cobre',       hex: '#7c2d12' },
 ];
 
 function ThemePicker() {
@@ -60,8 +70,9 @@ function ThemePicker() {
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50 min-w-[140px]">
+        <div className="absolute right-0 top-9 bg-white rounded-xl shadow-lg border border-gray-200 p-2 z-50 min-w-[160px]">
           <p className="text-xs text-gray-400 px-2 pb-1 font-semibold">Color de tema</p>
+          <div className="max-h-72 overflow-y-auto">
           {THEMES.map(th => (
             <button
               key={th.id}
@@ -73,6 +84,7 @@ function ThemePicker() {
               {current === th.id && <span className="ml-auto text-brand-700">✓</span>}
             </button>
           ))}
+          </div>
         </div>
       )}
     </div>
