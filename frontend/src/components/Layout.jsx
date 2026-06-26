@@ -276,10 +276,6 @@ export default function Layout({ children }) {
             {item.label.split(' ').slice(1).join(' ')}
           </NavLink>
         ))}
-        <div className="mt-auto text-xs text-gray-400 px-4 py-3">
-          {user?.nombre}<br />
-          <span className="text-brand-600 font-medium">{user?.rol}</span>
-        </div>
       </aside>
     </div>
   );
