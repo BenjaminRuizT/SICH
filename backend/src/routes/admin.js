@@ -231,6 +231,37 @@ router.get('/sin-validar', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Configuración de aplicación
+// ---------------------------------------------------------------------------
+
+router.get('/config', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT key, value FROM app_config');
+    const cfg = {};
+    rows.forEach(r => { cfg[r.key] = r.value; });
+    res.json(cfg);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/config', requireAdmin, async (req, res) => {
+  try {
+    const allowed = ['inactivity_minutes'];
+    const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+    for (const [key, value] of updates) {
+      const parsed = parseInt(value);
+      if (isNaN(parsed) || parsed < 1 || parsed > 480)
+        return res.status(400).json({ error: `Valor inválido para ${key}` });
+      await pool.query(
+        `INSERT INTO app_config(key, value) VALUES($1, $2)
+         ON CONFLICT (key) DO UPDATE SET value=$2`,
+        [key, String(parsed)]
+      );
+    }
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------------------------------------------------------------------------
 // Reset de aplicación
 // ---------------------------------------------------------------------------
 

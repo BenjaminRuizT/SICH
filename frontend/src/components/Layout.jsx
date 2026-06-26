@@ -93,6 +93,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const isAdmin = user?.rol === 'admin';
   const nav = isAdmin ? NAV_ADMIN : NAV_AUDITOR;
+  const [inactivityMs, setInactivityMs] = useState(20 * 60 * 1000);
 
   // Restore saved theme on mount
   useEffect(() => {
@@ -100,7 +101,14 @@ export default function Layout({ children }) {
     if (saved !== 'teal') document.documentElement.setAttribute('data-theme', saved);
   }, []);
 
-  useInactivity(async () => { await logout(); navigate('/login'); });
+  useEffect(() => {
+    fetch('/api/config').then(r => r.json()).then(cfg => {
+      const mins = parseInt(cfg.inactivity_minutes);
+      if (!isNaN(mins) && mins > 0) setInactivityMs(mins * 60000);
+    }).catch(() => {});
+  }, []);
+
+  useInactivity(async () => { await logout(); navigate('/login'); }, inactivityMs);
   const updateAvailable = useVersionCheck();
 
   return (

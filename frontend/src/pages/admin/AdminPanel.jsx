@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
 
 const ITEMS = [
-  { to: '/admin/usuarios',      label: '👥 Usuarios',               desc: 'Gestionar cuentas de acceso' },
-  { to: '/admin/empleados',     label: '🏢 Empleados',              desc: 'Ver y gestionar catálogo de empleados' },
-  { to: '/admin/herramientas',  label: '🔧 Herramientas',           desc: 'Catálogo de herramientas con historial de revisiones' },
-  { to: '/admin/importar',      label: '📥 Importar datos',         desc: 'Cargar MAF y plantilla desde Excel o JSON' },
-  { to: '/admin/reset',         label: '🗑 Resetear aplicación',    desc: 'Borrar datos con opciones de conservación' },
+  { to: '/admin/usuarios',       label: '👥 Usuarios',              desc: 'Gestionar cuentas de acceso' },
+  { to: '/admin/empleados',      label: '🏢 Empleados',             desc: 'Ver y gestionar catálogo de empleados' },
+  { to: '/admin/herramientas',   label: '🔧 Herramientas',          desc: 'Catálogo de herramientas con historial de revisiones' },
+  { to: '/admin/importar',       label: '📥 Importar datos',        desc: 'Cargar MAF y plantilla desde Excel o JSON' },
+  { to: '/admin/configuracion',  label: '⚙️ Configuración',         desc: 'Tiempo de inactividad y parámetros del sistema' },
+  { to: '/admin/reset',          label: '🗑 Resetear aplicación',   desc: 'Borrar datos con opciones de conservación' },
 ];
 
 export default function AdminPanel() {

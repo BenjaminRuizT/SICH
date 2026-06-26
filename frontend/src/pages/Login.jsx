@@ -38,7 +38,7 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="SICH" className="w-24 h-24 mx-auto rounded-2xl object-cover shadow-2xl ring-4 ring-white/20 mb-4" />
+          <img src="/logo.png" alt="SICH" className="w-24 h-24 mx-auto rounded-full object-cover shadow-2xl ring-4 ring-white/30 mb-4" />
           <h1 className="text-3xl font-bold text-white tracking-tight">SICH</h1>
           <p className="text-brand-300 text-sm mt-1">Sistema Integral de Control de Herramienta</p>
         </div>
