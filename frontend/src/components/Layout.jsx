@@ -120,9 +120,12 @@ export default function Layout({ children }) {
       {/* Top bar */}
       <header className="bg-brand-900 text-white sticky top-0 z-40 shadow-lg">
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-lg tracking-tight">SICH</span>
-            <span className="hidden sm:inline text-brand-300 text-xs">v{APP_VERSION}</span>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="SICH" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/20" />
+            <div className="hidden sm:flex flex-col leading-none">
+              <span className="font-bold text-base tracking-tight">SICH</span>
+              <span className="text-brand-300 text-[10px]">v{APP_VERSION}</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <ThemePicker />
