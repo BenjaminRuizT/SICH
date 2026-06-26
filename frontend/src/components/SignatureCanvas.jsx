@@ -23,7 +23,12 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
       const src = e.touches ? e.touches[0] : e;
-      return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (src.clientX - rect.left) * scaleX,
+        y: (src.clientY - rect.top) * scaleY,
+      };
     };
 
     const start = (e) => { drawing.current = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
