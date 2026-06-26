@@ -1,12 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../../context/AuthContext';
 
 const TIPO_LABEL = { auto: '🚗 Auto', laptop: '💻 Laptop', computo: '🖥 Cómputo' };
+
+function exportCSV(rows) {
+  const headers = ['Tipo', 'Marca', 'Modelo', 'Año', 'No. Activo', 'Código Barras', 'Plaza', 'Empleado', 'No. Empleado'];
+  const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [
+    headers.join(','),
+    ...rows.map(i => [
+      i.tipo,
+      i.marca || '',
+      i.modelo || '',
+      i.anio || '',
+      i.no_activo || '',
+      i.codigo_barras || '',
+      i.plaza || '',
+      i.empleado_nombre || i.asignado_a_raw || '',
+      i.numero_empleado || '',
+    ].map(escape).join(',')),
+  ];
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sin_validar_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function SinValidar() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState({ tipo: '', plaza: '' });
+  const [busqueda, setBusqueda] = useState('');
 
   const cargar = async () => {
     setLoading(true);
@@ -23,8 +50,18 @@ export default function SinValidar() {
   useEffect(() => { cargar(); }, [filtro]);
 
   const plazas = [...new Set(items.map(i => i.plaza).filter(Boolean))].sort();
+
+  const filtrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(i => [
+      i.marca, i.modelo, i.no_activo, i.codigo_barras,
+      i.empleado_nombre, i.asignado_a_raw, i.numero_empleado, i.plaza,
+    ].some(v => v && String(v).toLowerCase().includes(q)));
+  }, [items, busqueda]);
+
   const totals = { auto: 0, laptop: 0, computo: 0 };
-  items.forEach(i => { if (totals[i.tipo] !== undefined) totals[i.tipo]++; });
+  filtrados.forEach(i => { if (totals[i.tipo] !== undefined) totals[i.tipo]++; });
 
   return (
     <div className="md:ml-56 space-y-4">
@@ -44,7 +81,21 @@ export default function SinValidar() {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative">
+          <input
+            className="input w-56 min-h-0 py-2 text-sm pr-8"
+            placeholder="Buscar por nombre, no. activo, CB…"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+          {busqueda && (
+            <button
+              onClick={() => setBusqueda('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+            >✕</button>
+          )}
+        </div>
         <select className="input w-auto min-h-0 py-2 text-sm"
           value={filtro.tipo} onChange={e => setFiltro(f => ({ ...f, tipo: e.target.value }))}>
           <option value="">Todos los tipos</option>
@@ -57,19 +108,34 @@ export default function SinValidar() {
           <option value="">Todas las plazas</option>
           {plazas.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <span className="text-sm text-gray-500 self-center">{items.length} registros</span>
+        <span className="text-sm text-gray-500 self-center">{filtrados.length} registros</span>
+        {filtrados.length > 0 && (
+          <button
+            onClick={() => exportCSV(filtrados)}
+            className="ml-auto flex items-center gap-1.5 text-sm bg-brand-700 hover:bg-brand-800 text-white px-3 py-2 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Exportar CSV
+          </button>
+        )}
       </div>
 
       {loading ? (
         <p className="text-gray-400 text-sm">Cargando...</p>
-      ) : items.length === 0 ? (
+      ) : filtrados.length === 0 && !busqueda && !filtro.tipo && !filtro.plaza ? (
         <div className="card text-center py-10">
           <p className="text-4xl mb-2">✅</p>
           <p className="font-semibold text-gray-700">¡Todas las herramientas han sido validadas!</p>
         </div>
+      ) : filtrados.length === 0 ? (
+        <div className="card text-center py-8">
+          <p className="text-gray-400 text-sm">Sin resultados para la búsqueda actual.</p>
+        </div>
       ) : (
         <div className="space-y-2">
-          {items.map(item => (
+          {filtrados.map(item => (
             <div key={item.id} className="card flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
