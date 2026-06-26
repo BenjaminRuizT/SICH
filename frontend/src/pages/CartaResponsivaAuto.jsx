@@ -65,11 +65,8 @@ export default function CartaResponsivaAuto() {
           <table className="w-full border-collapse border border-gray-800 mb-6 text-xs">
             <tbody>
               <tr>
-                <td rowSpan="3" className="border border-gray-800 px-3 py-2 font-black text-sm w-32">
-                  <div className="bg-black text-white text-center px-2 py-1 font-black leading-tight">
-                    <div className="text-base">FEMSA</div>
-                    <div className="text-[9px] tracking-widest">COMERCIO</div>
-                  </div>
+                <td rowSpan="3" className="border border-gray-800 px-3 py-2 w-32 text-center">
+                  <img src="/femsa.png" alt="FEMSA Comercio" className="w-full max-h-16 object-contain mx-auto" />
                 </td>
                 <td className="border border-gray-800 text-center text-[10px] px-2 py-0.5" colSpan="2">FORMATO</td>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">CÓDIGO: OYC</td>
@@ -130,11 +127,8 @@ export default function CartaResponsivaAuto() {
           <table className="w-full border-collapse border border-gray-800 mb-6 text-xs">
             <tbody>
               <tr>
-                <td rowSpan="3" className="border border-gray-800 px-3 py-2 font-black text-sm w-32">
-                  <div className="bg-black text-white text-center px-2 py-1 font-black leading-tight">
-                    <div className="text-base">FEMSA</div>
-                    <div className="text-[9px] tracking-widest">COMERCIO</div>
-                  </div>
+                <td rowSpan="3" className="border border-gray-800 px-3 py-2 w-32 text-center">
+                  <img src="/femsa.png" alt="FEMSA Comercio" className="w-full max-h-16 object-contain mx-auto" />
                 </td>
                 <td className="border border-gray-800 text-center text-[10px] px-2 py-0.5" colSpan="2">FORMATO</td>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">CÓDIGO: OYC</td>

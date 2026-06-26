@@ -58,7 +58,10 @@ export default function CartaResponsivaEquipo() {
       <div className="max-w-3xl mx-auto print:max-w-none p-8 print:p-0 pt-20 print:pt-0">
         <div className="bg-white shadow-md print:shadow-none p-10 print:p-12">
 
-          <p className="text-sm mb-2 text-right text-gray-500 text-[10px]">Folio: <strong>{folio}</strong></p>
+          <div className="flex items-center justify-between mb-4">
+            <img src="/femsa.png" alt="FEMSA Comercio" className="h-12 object-contain" />
+            <p className="text-[10px] text-gray-500">Folio: <strong>{folio}</strong></p>
+          </div>
           <p className="text-sm mb-6">{ciudad}, {emp.region || 'Baja California'} a {fmt(rev.fecha_revision)}</p>
 
           <h1 className="text-base font-black text-center uppercase tracking-wide mb-6 border-y border-gray-800 py-2">
