@@ -25,13 +25,14 @@ const THEMES = [
 
 function ThemePicker() {
   const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState(() => localStorage.getItem('sich-theme') || 'slate');
+  const [current, setCurrent] = useState(() => {
+    const saved = localStorage.getItem('sich-theme');
+    return THEMES.find(t => t.id === saved) ? saved : 'slate';
+  });
   const ref = useRef(null);
 
   useEffect(() => {
-    const theme = current === 'teal' ? null : current;
-    document.documentElement.setAttribute('data-theme', theme || '');
-    if (!theme) document.documentElement.removeAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', current);
   }, [current]);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ function ThemePicker() {
     setOpen(false);
   };
 
-  const t = THEMES.find(t => t.id === current);
+  const t = THEMES.find(t => t.id === current) || THEMES[0];
 
   return (
     <div className="relative" ref={ref}>
@@ -173,10 +174,10 @@ export default function Layout({ children }) {
   const [inactivityMs, setInactivityMs] = useState(20 * 60 * 1000);
   const [showPwdModal, setShowPwdModal] = useState(false);
 
-  // Restore saved theme on mount
   useEffect(() => {
-    const saved = localStorage.getItem('sich-theme') || 'slate';
-    if (saved !== 'teal') document.documentElement.setAttribute('data-theme', saved);
+    const saved = localStorage.getItem('sich-theme');
+    const valid = THEMES.find(t => t.id === saved) ? saved : 'slate';
+    document.documentElement.setAttribute('data-theme', valid);
   }, []);
 
   useEffect(() => {
