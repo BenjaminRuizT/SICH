@@ -35,8 +35,20 @@ app.get('/api/version', (req, res) => res.json({ version: '1.3.0' }));
 
 if (isProd) {
   const dist = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(dist));
-  app.get('*', (req, res) => res.sendFile(path.join(dist, 'index.html')));
+  // Assets con hash (JS/CSS) → caché larga; index.html → sin caché
+  app.use(express.static(dist, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
+  app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(dist, 'index.html'));
+  });
 }
 
 const PORT = process.env.PORT || 3001;
