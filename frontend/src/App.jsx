@@ -11,8 +11,10 @@ import Empleados from './pages/admin/Empleados';
 import ImportarDatos from './pages/admin/ImportarDatos';
 import SinValidar from './pages/admin/SinValidar';
 import ResetApp from './pages/admin/ResetApp';
+import HerramientasAdmin from './pages/admin/Herramientas';
 import CartaResponsivaAuto from './pages/CartaResponsivaAuto';
 import CartaResponsivaEquipo from './pages/CartaResponsivaEquipo';
+import Verificar from './pages/Verificar';
 
 function AuthGuard({ children, adminOnly = false, noLayout = false }) {
   const { user, loading } = useAuth();
@@ -32,15 +34,19 @@ function AppRoutes() {
       <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
       <Route path="/nueva" element={<AuthGuard><NuevaRevision /></AuthGuard>} />
       <Route path="/historial" element={<AuthGuard><Historial /></AuthGuard>} />
+      <Route path="/sin-validar" element={<AuthGuard><SinValidar /></AuthGuard>} />
       <Route path="/admin" element={<AuthGuard adminOnly><AdminPanel /></AuthGuard>} />
       <Route path="/admin/usuarios" element={<AuthGuard adminOnly><Usuarios /></AuthGuard>} />
       <Route path="/admin/empleados" element={<AuthGuard adminOnly><Empleados /></AuthGuard>} />
+      <Route path="/admin/herramientas" element={<AuthGuard adminOnly><HerramientasAdmin /></AuthGuard>} />
       <Route path="/admin/importar" element={<AuthGuard adminOnly><ImportarDatos /></AuthGuard>} />
       <Route path="/admin/sin-validar" element={<AuthGuard adminOnly><SinValidar /></AuthGuard>} />
       <Route path="/admin/reset" element={<AuthGuard adminOnly><ResetApp /></AuthGuard>} />
       {/* Cartas responsivas — print pages, sin sidebar */}
       <Route path="/carta/auto/:id" element={<AuthGuard noLayout><CartaResponsivaAuto /></AuthGuard>} />
       <Route path="/carta/equipo/:id" element={<AuthGuard noLayout><CartaResponsivaEquipo /></AuthGuard>} />
+      {/* Verificación pública — sin auth */}
+      <Route path="/verificar/:id" element={<Verificar />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

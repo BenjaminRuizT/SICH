@@ -9,6 +9,7 @@ const NAV_AUDITOR = [
   { to: '/', label: '🏠 Inicio', exact: true },
   { to: '/nueva', label: '➕ Nueva Revisión' },
   { to: '/historial', label: '📋 Historial' },
+  { to: '/sin-validar', label: '🔍 Sin Validar' },
 ];
 const NAV_ADMIN = [
   ...NAV_AUDITOR,
@@ -17,9 +18,7 @@ const NAV_ADMIN = [
 
 const THEMES = [
   { id: 'teal',     label: 'Teal',        hex: '#0f766e' },
-  { id: 'indigo',   label: 'Índigo',      hex: '#4338ca' },
   { id: 'slate',    label: 'Gris',        hex: '#334155' },
-  { id: 'violet',   label: 'Violeta',     hex: '#6d28d9' },
   { id: 'rose',     label: 'Rosa',        hex: '#be123c' },
   { id: 'navy',     label: 'Azul Marina', hex: '#1e3a8a' },
   { id: 'forest',   label: 'Verde Bosque',hex: '#166534' },
@@ -28,9 +27,7 @@ const THEMES = [
   { id: 'espresso', label: 'Espresso',    hex: '#78350f' },
   { id: 'steel',    label: 'Acero',       hex: '#164e63' },
   { id: 'olive',    label: 'Verde Olivo', hex: '#3f6212' },
-  { id: 'plum',     label: 'Ciruela',     hex: '#701a75' },
   { id: 'charcoal', label: 'Carbón',      hex: '#18181b' },
-  { id: 'copper',   label: 'Cobre',       hex: '#7c2d12' },
 ];
 
 function ThemePicker() {

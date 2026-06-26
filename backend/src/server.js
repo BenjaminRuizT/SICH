@@ -31,7 +31,21 @@ app.get('/api/config', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true, env: process.env.NODE_ENV }));
-app.get('/api/version', (req, res) => res.json({ version: '1.4.0' }));
+app.get('/api/version', (req, res) => res.json({ version: '1.5.0' }));
+
+// Verificación pública de documentos (sin auth)
+app.get('/api/verificar/:id', async (req, res) => {
+  const pool = require('./db');
+  try {
+    const { rows: [rev] } = await pool.query(
+      `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.tiene_auto, r.tiene_equipo,
+              e.nombre_completo, e.numero_empleado, e.plaza
+       FROM revisiones r LEFT JOIN empleados e ON r.empleado_id=e.id
+       WHERE r.id=$1`, [req.params.id]);
+    if (!rev) return res.status(404).json({ error: 'Documento no encontrado' });
+    res.json(rev);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 if (isProd) {
   const dist = path.join(__dirname, '../../frontend/dist');

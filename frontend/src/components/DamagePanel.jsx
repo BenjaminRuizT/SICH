@@ -1,19 +1,23 @@
 import { useState } from 'react';
 
 const CAR_ZONES = [
-  { id: 'parachoque_frontal', label: 'Parachoque frontal' },
-  { id: 'cofre', label: 'Cofre' },
-  { id: 'parabrisas_frontal', label: 'Parabrisas frontal' },
-  { id: 'espejo_izq', label: 'Espejo izq.' },
-  { id: 'espejo_der', label: 'Espejo der.' },
-  { id: 'puerta_del_izq', label: 'Puerta delantera izq.' },
-  { id: 'techo', label: 'Techo' },
-  { id: 'puerta_del_der', label: 'Puerta delantera der.' },
-  { id: 'puerta_tra_izq', label: 'Puerta trasera izq.' },
-  { id: 'puerta_tra_der', label: 'Puerta trasera der.' },
-  { id: 'parabrisas_trasero', label: 'Parabrisas trasero' },
-  { id: 'cajuela', label: 'Cajuela' },
-  { id: 'parachoque_trasero', label: 'Parachoque trasero' },
+  { id: 'parachoque_frontal',    label: 'Parachoque frontal' },
+  { id: 'cofre',                 label: 'Cofre' },
+  { id: 'guardafango_del_izq',   label: 'Guardafango delantero izq.' },
+  { id: 'guardafango_del_der',   label: 'Guardafango delantero der.' },
+  { id: 'parabrisas_frontal',    label: 'Parabrisas frontal' },
+  { id: 'espejo_izq',            label: 'Espejo izq.' },
+  { id: 'espejo_der',            label: 'Espejo der.' },
+  { id: 'puerta_del_izq',        label: 'Puerta delantera izq.' },
+  { id: 'techo',                 label: 'Techo' },
+  { id: 'puerta_del_der',        label: 'Puerta delantera der.' },
+  { id: 'puerta_tra_izq',        label: 'Puerta trasera izq.' },
+  { id: 'puerta_tra_der',        label: 'Puerta trasera der.' },
+  { id: 'guardafango_tra_izq',   label: 'Guardafango trasero izq.' },
+  { id: 'guardafango_tra_der',   label: 'Guardafango trasero der.' },
+  { id: 'parabrisas_trasero',    label: 'Parabrisas trasero' },
+  { id: 'cajuela',               label: 'Cajuela' },
+  { id: 'parachoque_trasero',    label: 'Parachoque trasero' },
 ];
 
 const LAPTOP_ZONES = [
@@ -28,19 +32,23 @@ const LAPTOP_ZONES = [
 
 // Car zone SVG definitions [x, y, w, h, rx]
 const CAR_SVG_ZONES = {
-  parachoque_frontal: [35, 8, 130, 30, 14],
-  cofre:              [10, 38, 180, 90, 4],
-  parabrisas_frontal: [28, 128, 144, 36, 3],
-  espejo_izq:         [-2, 138, 16, 30, 4],
-  espejo_der:         [186, 138, 16, 30, 4],
-  puerta_del_izq:     [10, 164, 58, 72, 2],
-  techo:              [68, 164, 64, 148, 2],
-  puerta_del_der:     [132, 164, 58, 72, 2],
-  puerta_tra_izq:     [10, 236, 58, 76, 2],
-  puerta_tra_der:     [132, 236, 58, 76, 2],
-  parabrisas_trasero: [28, 312, 144, 36, 3],
-  cajuela:            [10, 348, 180, 90, 4],
-  parachoque_trasero: [35, 438, 130, 30, 14],
+  parachoque_frontal:  [35,  8,   130, 30, 14],
+  cofre:               [10,  38,  180, 90,  4],
+  guardafango_del_izq: [10,  70,  22,  60,  3],
+  guardafango_del_der: [168, 70,  22,  60,  3],
+  parabrisas_frontal:  [28,  128, 144, 36,  3],
+  espejo_izq:          [-2,  138, 16,  30,  4],
+  espejo_der:          [186, 138, 16,  30,  4],
+  puerta_del_izq:      [10,  164, 58,  72,  2],
+  techo:               [68,  164, 64,  148, 2],
+  puerta_del_der:      [132, 164, 58,  72,  2],
+  puerta_tra_izq:      [10,  236, 58,  76,  2],
+  puerta_tra_der:      [132, 236, 58,  76,  2],
+  guardafango_tra_izq: [10,  270, 22,  50,  3],
+  guardafango_tra_der: [168, 270, 22,  50,  3],
+  parabrisas_trasero:  [28,  312, 144, 36,  3],
+  cajuela:             [10,  348, 180, 90,  4],
+  parachoque_trasero:  [35,  438, 130, 30, 14],
 };
 
 // Laptop zone SVG definitions [x, y, w, h, rx]

@@ -22,15 +22,20 @@ router.post('/', requireAuth, async (req, res) => {
         `INSERT INTO revision_auto(revision_id,herramienta_id,herramienta_snapshot,no_serie,placas,
            codigo_barras,kilometraje,poliza_seguro,licencia_numero,llanta_refaccion,comentarios,
            foto_condiciones,foto_licencia,foto_tarjeta_circulacion,
-           danos,firma_empleado,firma_auditor)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+           danos,firma_empleado,firma_auditor,
+           no_modelo,gato_cruceta,foto_licencia_reverso)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
         [rev.id, auto.herramienta_id || null, JSON.stringify(auto.herramienta_snapshot || {}),
          auto.no_serie, auto.placas, auto.codigo_barras, auto.kilometraje,
-         auto.poliza_seguro, auto.licencia_numero, auto.llanta_refaccion,
+         auto.poliza_seguro != null ? String(auto.poliza_seguro) : null,
+         auto.licencia != null ? String(auto.licencia) : null,
+         auto.llanta_refaccion,
          auto.comentarios, JSON.stringify(auto.foto_condiciones || []),
          auto.foto_licencia || null, auto.foto_tarjeta_circulacion || null,
          JSON.stringify(auto.danos || []),
-         auto.firma_empleado || null, auto.firma_auditor || null]
+         auto.firma_empleado || null, auto.firma_auditor || null,
+         auto.no_modelo || null, auto.gato_cruceta != null ? Boolean(auto.gato_cruceta) : null,
+         auto.foto_licencia_reverso || null]
       );
     }
 

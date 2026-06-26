@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const pool = require('../db');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAdmin, requireAuth } = require('../middleware/auth');
 const ExcelJS = require('exceljs');
 
 // ---------------------------------------------------------------------------
@@ -150,10 +150,63 @@ router.post('/import-excel/:tipo', requireAdmin, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Catálogo de herramientas (lista + detalle)
+// ---------------------------------------------------------------------------
+
+router.get('/herramientas', requireAdmin, async (req, res) => {
+  try {
+    const { tipo, plaza, sin_revision } = req.query;
+    let q = `
+      SELECT h.id, h.tipo, h.codigo_barras, h.no_activo, h.marca, h.modelo, h.anio,
+             h.plaza, h.asignado_a_raw, h.serie,
+             e.nombre_completo AS empleado_nombre, e.numero_empleado,
+             CASE WHEN ra.herramienta_id IS NOT NULL OR re.herramienta_id IS NOT NULL
+                  THEN true ELSE false END AS tiene_revision
+      FROM herramientas h
+      LEFT JOIN empleados e ON h.empleado_id = e.id
+      LEFT JOIN revision_auto ra ON ra.herramienta_id = h.id
+      LEFT JOIN revision_equipo re ON re.herramienta_id = h.id
+      WHERE h.is_active = true`;
+    const params = [];
+    if (tipo) { params.push(tipo); q += ` AND h.tipo=$${params.length}`; }
+    if (plaza) { params.push(plaza); q += ` AND h.plaza=$${params.length}`; }
+    q += ' GROUP BY h.id, e.nombre_completo, e.numero_empleado, ra.herramienta_id, re.herramienta_id';
+    if (sin_revision === '1') q += ' HAVING ra.herramienta_id IS NULL AND re.herramienta_id IS NULL';
+    q += ' ORDER BY h.tipo, h.plaza, h.codigo_barras';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/herramientas/:id', requireAdmin, async (req, res) => {
+  try {
+    const { rows: [h] } = await pool.query(
+      `SELECT h.*, e.nombre_completo AS empleado_nombre, e.numero_empleado
+       FROM herramientas h LEFT JOIN empleados e ON h.empleado_id=e.id
+       WHERE h.id=$1`, [req.params.id]);
+    if (!h) return res.status(404).json({ error: 'No encontrada' });
+
+    const { rows: revs } = await pool.query(
+      `SELECT r.id, r.fecha_revision, r.auditor_nombre,
+              'auto' AS tipo
+       FROM revisiones r JOIN revision_auto ra ON ra.revision_id=r.id
+       WHERE ra.herramienta_id=$1
+       UNION ALL
+       SELECT r.id, r.fecha_revision, r.auditor_nombre,
+              'equipo' AS tipo
+       FROM revisiones r JOIN revision_equipo re ON re.revision_id=r.id
+       WHERE re.herramienta_id=$1
+       ORDER BY fecha_revision DESC`, [req.params.id]);
+
+    res.json({ ...h, revisiones: revs });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---------------------------------------------------------------------------
 // Herramientas sin revisión
 // ---------------------------------------------------------------------------
 
-router.get('/sin-validar', requireAdmin, async (req, res) => {
+router.get('/sin-validar', requireAuth, async (req, res) => {
   try {
     const { tipo, plaza } = req.query;
     let q = `

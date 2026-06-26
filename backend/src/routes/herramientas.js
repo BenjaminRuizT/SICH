@@ -17,7 +17,7 @@ router.get('/empleado/:empleadoId', requireAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Buscar por código de barras
+// Buscar por código de barras (exacto)
 router.get('/cb/:cb', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -25,6 +25,21 @@ router.get('/cb/:cb', requireAuth, async (req, res) => {
       [req.params.cb.trim()]
     );
     res.json(rows[0] || null);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Buscar por código de barras (autocomplete)
+router.get('/search', requireAuth, async (req, res) => {
+  try {
+    const { q = '', tipo } = req.query;
+    if (q.length < 2) return res.json([]);
+    const params = [`%${q}%`];
+    let query = `SELECT id, tipo, codigo_barras, no_activo, marca, modelo, anio, serie
+                 FROM herramientas WHERE codigo_barras ILIKE $1 AND is_active=true`;
+    if (tipo) { params.push(tipo); query += ` AND tipo=$${params.length}`; }
+    query += ' ORDER BY codigo_barras LIMIT 10';
+    const { rows } = await pool.query(query, params);
+    res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

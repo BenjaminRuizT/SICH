@@ -127,7 +127,16 @@ export default function Historial() {
               <div className="card bg-blue-50 border-blue-200 space-y-1">
                 <p className="font-semibold text-blue-800">🚗 Automóvil</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-                  {[['Placas', selected.auto.placas],['No. Serie', selected.auto.no_serie],['Kilometraje', selected.auto.kilometraje],['Póliza', selected.auto.poliza_seguro],['Licencia', selected.auto.licencia_numero],['Llanta ref.', selected.auto.llanta_refaccion == null ? '—' : selected.auto.llanta_refaccion ? 'Sí' : 'No']].map(([l,v]) => (
+                  {[
+                    ['Placas', selected.auto.placas],
+                    ['No. Serie', selected.auto.no_serie],
+                    ['Modelo', selected.auto.no_modelo],
+                    ['Kilometraje', selected.auto.kilometraje],
+                    ['Póliza', selected.auto.poliza_seguro === true || selected.auto.poliza_seguro === 'true' ? 'Sí' : selected.auto.poliza_seguro === false || selected.auto.poliza_seguro === 'false' ? 'No' : selected.auto.poliza_seguro || '—'],
+                    ['Licencia', selected.auto.licencia === true || selected.auto.licencia === 'true' ? 'Sí' : selected.auto.licencia === false || selected.auto.licencia === 'false' ? 'No' : selected.auto.licencia || '—'],
+                    ['Llanta ref.', selected.auto.llanta_refaccion == null ? '—' : selected.auto.llanta_refaccion ? 'Sí' : 'No'],
+                    ['Gato/Cruceta', selected.auto.gato_cruceta == null ? '—' : selected.auto.gato_cruceta ? 'Sí' : 'No'],
+                  ].map(([l,v]) => (
                     <div key={l}><span className="text-gray-500">{l}:</span> <b>{v || '—'}</b></div>
                   ))}
                 </div>
@@ -136,10 +145,30 @@ export default function Historial() {
                   {selected.auto.foto_condiciones?.length > 0 && selected.auto.foto_condiciones.map((f, i) => (
                     <img key={i} src={f} alt="" className="h-16 w-16 object-cover rounded-lg border" />
                   ))}
-                  {selected.auto.foto_licencia && <img src={selected.auto.foto_licencia} alt="Licencia" className="h-16 w-16 object-cover rounded-lg border" />}
+                  {selected.auto.foto_licencia && <img src={selected.auto.foto_licencia} alt="Licencia frente" className="h-16 w-16 object-cover rounded-lg border" title="Licencia frente" />}
+                  {selected.auto.foto_licencia_reverso && <img src={selected.auto.foto_licencia_reverso} alt="Licencia reverso" className="h-16 w-16 object-cover rounded-lg border" title="Licencia reverso" />}
                   {selected.auto.foto_tarjeta_circulacion && <img src={selected.auto.foto_tarjeta_circulacion} alt="Tarjeta circ." className="h-16 w-16 object-cover rounded-lg border" />}
-                  {selected.auto.firma_carta_responsiva && <img src={selected.auto.firma_carta_responsiva} alt="Firma" className="h-16 w-32 object-contain rounded-lg border bg-white" />}
                 </div>
+                {(selected.auto.firma_empleado || selected.auto.firma_auditor) && (
+                  <div className="flex gap-3 mt-2">
+                    {selected.auto.firma_empleado && (
+                      <div className="text-center">
+                        <img src={selected.auto.firma_empleado} alt="Firma empleado" className="h-12 border rounded bg-white" />
+                        <p className="text-[10px] text-gray-400">Empleado</p>
+                      </div>
+                    )}
+                    {selected.auto.firma_auditor && (
+                      <div className="text-center">
+                        <img src={selected.auto.firma_auditor} alt="Firma auditor" className="h-12 border rounded bg-white" />
+                        <p className="text-[10px] text-gray-400">Auditor</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <a href={`/carta/auto/${selected.id}`} target="_blank" rel="noreferrer"
+                  className="mt-2 inline-block text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">
+                  🖨 Ver Carta Compromiso
+                </a>
               </div>
             )}
             {selected.equipo && (
@@ -151,6 +180,26 @@ export default function Historial() {
                   ))}
                 </div>
                 {selected.equipo.foto_equipo && <img src={selected.equipo.foto_equipo} alt="Equipo" className="h-24 w-24 object-cover rounded-lg border mt-2" />}
+                {(selected.equipo.firma_empleado || selected.equipo.firma_auditor) && (
+                  <div className="flex gap-3 mt-2">
+                    {selected.equipo.firma_empleado && (
+                      <div className="text-center">
+                        <img src={selected.equipo.firma_empleado} alt="Firma empleado" className="h-12 border rounded bg-white" />
+                        <p className="text-[10px] text-gray-400">Empleado</p>
+                      </div>
+                    )}
+                    {selected.equipo.firma_auditor && (
+                      <div className="text-center">
+                        <img src={selected.equipo.firma_auditor} alt="Firma auditor" className="h-12 border rounded bg-white" />
+                        <p className="text-[10px] text-gray-400">Auditor</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <a href={`/carta/equipo/${selected.id}`} target="_blank" rel="noreferrer"
+                  className="mt-2 inline-block text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700">
+                  🖨 Ver Carta Responsiva
+                </a>
               </div>
             )}
           </div>

@@ -1,9 +1,17 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 
-export default function SignatureCanvas({ onSave, label = 'Firma' }) {
+export default function SignatureCanvas({ onSave, label = 'Firma', signerName = '' }) {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
+  const autoSaveTimer = useRef(null);
   const [signed, setSigned] = useState(false);
+
+  const autoSave = useCallback(() => {
+    clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      if (canvasRef.current) onSave(canvasRef.current.toDataURL('image/png'));
+    }, 800);
+  }, [onSave]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -19,12 +27,20 @@ export default function SignatureCanvas({ onSave, label = 'Firma' }) {
     };
 
     const start = (e) => { drawing.current = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); };
-    const move = (e) => { if (!drawing.current) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); setSigned(true); e.preventDefault(); };
-    const end = () => { drawing.current = false; };
+    const move = (e) => {
+      if (!drawing.current) return;
+      const p = getPos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      setSigned(true);
+      e.preventDefault();
+    };
+    const end = () => { if (drawing.current) { drawing.current = false; autoSave(); } };
 
     canvas.addEventListener('mousedown', start);
     canvas.addEventListener('mousemove', move);
     canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
     canvas.addEventListener('touchstart', start, { passive: false });
     canvas.addEventListener('touchmove', move, { passive: false });
     canvas.addEventListener('touchend', end);
@@ -32,33 +48,32 @@ export default function SignatureCanvas({ onSave, label = 'Firma' }) {
       canvas.removeEventListener('mousedown', start);
       canvas.removeEventListener('mousemove', move);
       canvas.removeEventListener('mouseup', end);
+      canvas.removeEventListener('mouseleave', end);
       canvas.removeEventListener('touchstart', start);
       canvas.removeEventListener('touchmove', move);
       canvas.removeEventListener('touchend', end);
+      clearTimeout(autoSaveTimer.current);
     };
-  }, []);
+  }, [autoSave]);
 
   const clear = () => {
+    clearTimeout(autoSaveTimer.current);
     const canvas = canvasRef.current;
     canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
     setSigned(false);
     onSave(null);
   };
 
-  const save = () => {
-    if (!signed) return;
-    onSave(canvasRef.current.toDataURL('image/png'));
-  };
-
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       <label className="label">{label}</label>
-      <div className="border-2 border-gray-300 rounded-xl overflow-hidden bg-gray-50">
-        <canvas ref={canvasRef} width={500} height={180} className="w-full touch-none" />
+      {signerName && <p className="text-xs text-gray-500 -mt-1">{signerName}</p>}
+      <div className={`border-2 rounded-xl overflow-hidden bg-gray-50 ${signed ? 'border-brand-400' : 'border-gray-300'}`}>
+        <canvas ref={canvasRef} width={500} height={160} className="w-full touch-none" />
       </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={clear} className="flex-1 text-sm border border-gray-300 rounded-lg py-2 hover:bg-gray-50">Limpiar</button>
-        <button type="button" onClick={save} disabled={!signed} className="flex-1 text-sm bg-brand-700 text-white rounded-lg py-2 hover:bg-brand-800 disabled:opacity-40">Guardar firma</button>
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-gray-400">{signed ? '✓ Firma capturada (se guarda automáticamente)' : 'Dibuja la firma arriba'}</p>
+        <button type="button" onClick={clear} className="text-xs text-red-500 hover:underline">Limpiar</button>
       </div>
     </div>
   );

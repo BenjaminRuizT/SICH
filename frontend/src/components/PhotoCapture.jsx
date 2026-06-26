@@ -18,11 +18,12 @@ function compressImage(file, maxPx = 1200, quality = 0.8) {
   });
 }
 
-export default function PhotoCapture({ label, onCapture, value, multiple = false }) {
-  const inputRef = useRef(null);
-  const [previews, setPreviews] = useState(multiple ? (value || []) : []);
+export default function PhotoCapture({ label, onCapture, value, multiple = false, sublabel = '' }) {
+  const cameraRef = useRef(null);
+  const galleryRef = useRef(null);
+  const [previews, setPreviews] = useState(multiple ? (value || []) : (value ? [value] : []));
 
-  const handleFile = async (e) => {
+  const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
     const compressed = await Promise.all(files.map(f => compressImage(f)));
     if (multiple) {
@@ -42,28 +43,47 @@ export default function PhotoCapture({ label, onCapture, value, multiple = false
     onCapture(multiple ? next : null);
   };
 
+  const maxReached = !multiple && previews.length >= 1;
+
   return (
     <div className="space-y-2">
       <label className="label">{label}</label>
+      {sublabel && <p className="text-xs text-gray-500 -mt-1">{sublabel}</p>}
       <div className="flex flex-wrap gap-2">
         {previews.map((src, i) => (
           <div key={i} className="relative">
             <img src={src} alt="" className="h-24 w-24 object-cover rounded-xl border border-gray-200" />
             <button type="button" onClick={() => remove(i)}
               className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
-              x
+              ×
             </button>
           </div>
         ))}
-        <button type="button"
-          onClick={() => inputRef.current.click()}
-          className="h-24 w-24 border-2 border-dashed border-brand-400 rounded-xl flex flex-col items-center justify-center text-brand-600 hover:bg-brand-50 transition-colors text-sm">
-          <span className="text-2xl">📷</span>
-          <span className="text-xs mt-1">Foto</span>
-        </button>
+        {!maxReached && (
+          <div className="flex gap-1">
+            <button type="button"
+              onClick={() => cameraRef.current.click()}
+              title="Tomar foto con cámara"
+              className="h-24 w-20 border-2 border-dashed border-brand-400 rounded-xl flex flex-col items-center justify-center text-brand-600 hover:bg-brand-50 transition-colors text-sm">
+              <span className="text-2xl">📷</span>
+              <span className="text-[10px] mt-1">Cámara</span>
+            </button>
+            <button type="button"
+              onClick={() => galleryRef.current.click()}
+              title="Seleccionar de galería"
+              className="h-24 w-20 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors text-sm">
+              <span className="text-2xl">🖼</span>
+              <span className="text-[10px] mt-1">Galería</span>
+            </button>
+          </div>
+        )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment"
-        multiple={multiple} className="hidden" onChange={handleFile} />
+      {/* Camera input */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment"
+        multiple={multiple} className="hidden" onChange={handleFiles} />
+      {/* Gallery input (no capture) */}
+      <input ref={galleryRef} type="file" accept="image/*"
+        multiple={multiple} className="hidden" onChange={handleFiles} />
     </div>
   );
 }
