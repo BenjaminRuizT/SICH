@@ -27,7 +27,7 @@ function ThemePicker() {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(() => {
     const saved = localStorage.getItem('sich-theme');
-    return THEMES.find(t => t.id === saved) ? saved : 'slate';
+    return THEMES.find(t => t.id === saved) ? saved : 'navy';
   });
   const ref = useRef(null);
 
@@ -176,7 +176,7 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('sich-theme');
-    const valid = THEMES.find(t => t.id === saved) ? saved : 'slate';
+    const valid = THEMES.find(t => t.id === saved) ? saved : 'navy';
     document.documentElement.setAttribute('data-theme', valid);
   }, []);
 
