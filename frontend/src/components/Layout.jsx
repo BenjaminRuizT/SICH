@@ -220,7 +220,7 @@ export default function Layout({ children }) {
             <button
               onClick={() => setShowPwdModal(true)}
               title="Cambiar contraseña"
-              className="text-sm text-brand-200 hidden md:inline hover:text-white transition-colors"
+              className="text-sm text-brand-200 hover:text-white transition-colors max-w-[100px] sm:max-w-none truncate"
             >
               {user?.nombre}
             </button>
