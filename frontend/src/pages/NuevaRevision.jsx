@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../context/AuthContext';
 import PhotoCapture from '../components/PhotoCapture';
@@ -146,6 +146,7 @@ const emptyEquipo = {
 
 export default function NuevaRevision() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [paso, setPaso] = useState(0);
   const [query, setQuery] = useState('');
@@ -165,6 +166,8 @@ export default function NuevaRevision() {
   const [config, setConfig] = useState({});
   const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null });
   const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
+  const [confirmReset, setConfirmReset] = useState(false);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     api.get('/config').then(r => {
@@ -177,6 +180,15 @@ export default function NuevaRevision() {
     }).catch(() => {});
     api.get('/herramientas/catalog').then(r => setCatalog(r.data)).catch(() => {});
   }, []);
+
+  // Detecta cuando el usuario navega a /nueva estando ya en /nueva (location.key cambia)
+  useEffect(() => {
+    if (isInitialMount.current) { isInitialMount.current = false; return; }
+    const enCurso = paso > 0 || !!empleado;
+    if (enCurso) {
+      setConfirmReset(true);
+    }
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buscar = useCallback(async (q) => {
     setQuery(q);
@@ -350,6 +362,30 @@ export default function NuevaRevision() {
 
   return (
     <div className="md:ml-56 max-w-2xl">
+      {/* Modal: confirmar inicio de nueva revisión con datos en curso */}
+      {confirmReset && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <p className="text-lg font-bold text-gray-900">¿Iniciar nueva revisión?</p>
+            <p className="text-sm text-gray-600">
+              Hay una revisión en curso. Si inicias una nueva se perderán los datos capturados hasta ahora.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="btn-secondary flex-1">
+                Continuar revisión
+              </button>
+              <button
+                onClick={() => { setConfirmReset(false); resetForm(); }}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm">
+                Nueva revisión
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress bar */}
       <div className="mb-6">
         <div className="flex gap-1 mb-2">
