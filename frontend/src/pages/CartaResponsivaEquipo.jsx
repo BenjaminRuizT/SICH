@@ -78,7 +78,7 @@ export default function CartaResponsivaEquipo() {
           <p className="text-sm leading-relaxed mb-10">
             Hago entrega para uso laboral{' '}
             <strong>
-              de Computadora de escritorio{' '}
+              de Laptop{' '}
               <u className="px-1">{descripcion || '___________________________'}</u>
             </strong>
             , para el buen uso y al servicio de la Compañía{' '}
