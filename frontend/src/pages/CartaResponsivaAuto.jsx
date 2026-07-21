@@ -200,11 +200,11 @@ export default function CartaResponsivaAuto() {
                 <p className="text-[10px] text-gray-500">Nombre y Firma del Empleado</p>
               </div>
               <div className="text-center">
-                {auto.firma_auditor
-                  ? <img src={auto.firma_auditor} alt="Firma auditor" className="h-20 mx-auto border-b border-gray-400 mb-1 max-w-full" />
+                {auto.firma_responsable_rh
+                  ? <img src={auto.firma_responsable_rh} alt="Firma responsable RH" className="h-20 mx-auto border-b border-gray-400 mb-1 max-w-full" />
                   : <div className="h-20 border-b border-gray-400 mb-1" />
                 }
-                <p className="text-[11px] font-semibold">{nombreAuditor}</p>
+                <p className="text-[11px] font-semibold">{auto.nombre_responsable_rh || nombreAuditor}</p>
                 <p className="text-[10px] text-gray-500">RH de la Unidad de Negocio</p>
               </div>
             </div>

@@ -94,6 +94,7 @@ const emptyAuto = {
   foto_condiciones: [], foto_licencia: null, foto_licencia_reverso: null,
   foto_tarjeta_circulacion: null, foto_poliza_seguro: null,
   danos: [], firma_empleado: null, firma_auditor: null,
+  nombre_responsable_rh: '', firma_responsable_rh: null,
 };
 
 const emptyEquipo = {
@@ -180,6 +181,8 @@ export default function NuevaRevision() {
     if (autoForm.gato_cruceta === null) e.gato_cruceta = 'Requerido';
     if (!autoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
     if (!autoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
+    if (!autoForm.nombre_responsable_rh) e.nombre_responsable_rh = 'Requerido';
+    if (!autoForm.firma_responsable_rh) e.firma_responsable_rh = 'Firma requerida';
     return e;
   };
 
@@ -512,15 +515,30 @@ export default function NuevaRevision() {
               onChange={e => setAutoForm(p => ({ ...p, comentarios: e.target.value }))} />
           </div>
 
-          {/* Dual signatures — with full names */}
+          {/* Firmas para carta compromiso */}
           <div className="card space-y-4">
             <p className="font-semibold text-sm text-gray-700">Firmas para carta compromiso</p>
             <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
               onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
+            <SignatureCanvas label="Firma del auditor (registro interno)" signerName={nombreAuditor}
               onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
             <Err field="firma_auditor" />
+          </div>
+
+          {/* Responsable de RH */}
+          <div className="card space-y-4">
+            <p className="font-semibold text-sm text-gray-700">Responsable de RH</p>
+            <div>
+              <label className="label">Nombre del responsable de RH<span className="text-red-500 ml-1">*</span></label>
+              <input className="input" type="text" value={autoForm.nombre_responsable_rh}
+                onChange={e => setAutoForm(p => ({ ...p, nombre_responsable_rh: e.target.value }))}
+                placeholder="Nombre completo..." />
+              <Err field="nombre_responsable_rh" />
+            </div>
+            <SignatureCanvas label="Firma del responsable de RH" signerName={autoForm.nombre_responsable_rh}
+              onSave={v => setAutoForm(p => ({ ...p, firma_responsable_rh: v }))} />
+            <Err field="firma_responsable_rh" />
           </div>
 
           {Object.keys(errors).length > 0 && (
