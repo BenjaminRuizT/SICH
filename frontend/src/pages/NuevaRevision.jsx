@@ -286,6 +286,23 @@ export default function NuevaRevision() {
   const nombreEmp = editEmpleado.nombre_completo || empleado?.nombre_completo || '';
   const nombreAuditor = user?.nombre || '';
 
+  const resetForm = () => {
+    setSavedId(null);
+    setPaso(0);
+    setQuery('');
+    setResultados([]);
+    setEmpleado(null);
+    setEditEmpleado({});
+    setHerramientas([]);
+    setRevisarAuto(false);
+    setRevisarEquipo(false);
+    setAutoSelec(null);
+    setEquipoSelec(null);
+    setAutoForm({ ...emptyAuto, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma });
+    setEquipoForm({ ...emptyEquipo, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma });
+    setErrors({});
+  };
+
   if (savedId) {
     return (
       <div className="md:ml-56 max-w-2xl">
@@ -305,7 +322,7 @@ export default function NuevaRevision() {
               </a>
             )}
             <button onClick={() => navigate('/historial')} className="btn-secondary">Ver historial</button>
-            <button onClick={() => navigate('/nueva')} className="text-sm text-brand-600 hover:underline">+ Nueva revisión</button>
+            <button onClick={resetForm} className="text-sm text-brand-600 hover:underline">+ Nueva revisión</button>
           </div>
         </div>
       </div>
