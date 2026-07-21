@@ -47,13 +47,15 @@ router.post('/', requireAuth, async (req, res) => {
       await client.query(
         `INSERT INTO revision_equipo(revision_id,herramienta_id,herramienta_snapshot,
            codigo_barras,marca,modelo,serie,foto_equipo,comentarios,
-           danos,firma_empleado,firma_auditor)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+           danos,firma_empleado,firma_auditor,
+           nombre_responsable_rh,firma_responsable_rh)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [rev.id, equipo.herramienta_id || null, JSON.stringify(equipo.herramienta_snapshot || {}),
          equipo.codigo_barras, equipo.marca, equipo.modelo, equipo.serie,
          equipo.foto_equipo || null, equipo.comentarios || null,
          JSON.stringify(equipo.danos || []),
-         equipo.firma_empleado || null, equipo.firma_auditor || null]
+         equipo.firma_empleado || null, equipo.firma_auditor || null,
+         equipo.nombre_responsable_rh || null, equipo.firma_responsable_rh || null]
       );
     }
 

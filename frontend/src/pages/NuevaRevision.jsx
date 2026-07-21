@@ -101,6 +101,7 @@ const emptyEquipo = {
   codigo_barras: '', marca: '', modelo: '', serie: '',
   foto_equipo: null, comentarios: '',
   danos: [], firma_empleado: null, firma_auditor: null,
+  nombre_responsable_rh: '', firma_responsable_rh: null,
 };
 
 export default function NuevaRevision() {
@@ -192,9 +193,9 @@ export default function NuevaRevision() {
     if (!equipoForm.marca) e.marca = 'Requerido';
     if (!equipoForm.modelo) e.modelo = 'Requerido';
     if (!equipoForm.serie) e.serie = 'Requerido';
-    if (!equipoForm.foto_equipo) e.foto_equipo = 'Requerida';
     if (!equipoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
-    if (!equipoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
+    if (!equipoForm.nombre_responsable_rh) e.nombre_responsable_rh = 'Requerido';
+    if (!equipoForm.firma_responsable_rh) e.firma_responsable_rh = 'Firma requerida';
     return e;
   };
 
@@ -207,7 +208,14 @@ export default function NuevaRevision() {
       const errs = validateAuto();
       if (Object.keys(errs).length) { setErrors(errs); return; }
       setErrors({});
-      if (revisarEquipo) { setPaso(4); return; }
+      if (revisarEquipo) {
+        setEquipoForm(f => ({
+          ...f,
+          nombre_responsable_rh: f.nombre_responsable_rh || autoForm.nombre_responsable_rh,
+          firma_responsable_rh: f.firma_responsable_rh || autoForm.firma_responsable_rh,
+        }));
+        setPaso(4); return;
+      }
       setPaso(5);
     } else if (paso === 4) {
       const errs = validateEquipo();
@@ -600,15 +608,35 @@ export default function NuevaRevision() {
               onChange={e => setEquipoForm(p => ({ ...p, comentarios: e.target.value }))} />
           </div>
 
-          {/* Dual signatures */}
+          {/* Firmas */}
           <div className="card space-y-4">
             <p className="font-semibold text-sm text-gray-700">Firmas para carta responsiva</p>
-            <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
+            <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
+            <SignatureCanvas label="Firma del auditor (registro interno)" signerName={nombreAuditor}
               onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
-            <Err field="firma_auditor" />
+          </div>
+
+          {/* Responsable de RH */}
+          <div className="card space-y-4 border-2 border-brand-200">
+            <p className="font-semibold text-sm text-gray-700">Responsable de RH — requerido para carta</p>
+            {equipoForm.firma_responsable_rh && (
+              <div className="flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                <img src={equipoForm.firma_responsable_rh} alt="Firma RH" className="h-10 object-contain" />
+                <p className="text-xs text-green-700">Firma cargada del paso anterior. Firme abajo para reemplazarla.</p>
+              </div>
+            )}
+            <div>
+              <label className="label">Nombre del responsable de RH<span className="text-red-500 ml-1">*</span></label>
+              <input className="input" type="text" value={equipoForm.nombre_responsable_rh}
+                onChange={e => setEquipoForm(p => ({ ...p, nombre_responsable_rh: e.target.value }))}
+                placeholder="Nombre completo..." />
+              <Err field="nombre_responsable_rh" />
+            </div>
+            <SignatureCanvas label="Firma del responsable de RH" signerName={equipoForm.nombre_responsable_rh}
+              onSave={v => setEquipoForm(p => ({ ...p, firma_responsable_rh: v }))} />
+            <Err field="firma_responsable_rh" />
           </div>
 
           {Object.keys(errors).length > 0 && (

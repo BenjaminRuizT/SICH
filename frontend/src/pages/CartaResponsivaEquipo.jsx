@@ -3,13 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../context/AuthContext';
 import { generateDocHash, generateQR, fmtFolio } from '../utils/docSecurity';
 
-function fmt(date) {
-  if (!date) return '___________________';
-  return new Date(date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
-}
 function fmtFull(date) {
   if (!date) return '—';
   return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+}
+function fmtDate(date) {
+  if (!date) return '___________________';
+  return new Date(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export default function CartaResponsivaEquipo() {
@@ -37,15 +37,16 @@ export default function CartaResponsivaEquipo() {
   const eq = rev.equipo;
   const snap = eq.herramienta_snapshot || {};
 
-  const ciudad = emp.plaza || 'Tijuana';
-  const nombreEmp = emp.nombre_completo || rev.nombre_completo || '';
-  const nombreAuditor = rev.auditor_nombre || '';
   const plaza = emp.plaza || '';
-  const modelo = eq.modelo || snap.modelo || '—';
-  const tipo = snap.tipo || 'Laptop';
-  const serie = eq.serie || snap.serie || '—';
-  const cb = eq.codigo_barras || snap.codigo_barras || '—';
+  const ciudad = plaza || 'Tijuana';
+  const nombreEmp = emp.nombre_completo || rev.nombre_completo || '';
+  const puesto = emp.posicion || '';
   const marca = eq.marca || snap.marca || '';
+  const modelo = eq.modelo || snap.modelo || '';
+  const descripcion = [marca, modelo].filter(Boolean).join(' ');
+  const noActivo = snap.no_activo || eq.codigo_barras || '—';
+  const serie = eq.serie || snap.serie || '—';
+  const nombreRH = eq.nombre_responsable_rh || rev.auditor_nombre || '';
   const folio = fmtFolio(rev.id);
 
   return (
@@ -55,52 +56,50 @@ export default function CartaResponsivaEquipo() {
         <button onClick={() => window.print()} className="bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">🖨 Imprimir / Guardar PDF</button>
       </div>
 
-      <div className="max-w-3xl mx-auto print:max-w-none p-8 print:p-0 pt-20 print:pt-0">
-        <div className="bg-white shadow-md print:shadow-none p-10 print:p-12">
+      <div className="max-w-2xl mx-auto print:max-w-none p-8 print:p-0 pt-20 print:pt-0">
+        <div className="bg-white shadow-md print:shadow-none p-12 print:p-10 min-h-screen print:min-h-0">
 
-          <div className="flex items-center justify-between mb-4">
-            <img src="/femsa.png" alt="FEMSA Comercio" className="h-12 object-contain" />
-            <p className="text-[10px] text-gray-500">Folio: <strong>{folio}</strong></p>
-          </div>
-          <p className="text-sm mb-6">{ciudad}, {emp.region || 'Baja California'} a {fmt(rev.fecha_revision)}</p>
-
-          <h1 className="text-base font-black text-center uppercase tracking-wide mb-6 border-y border-gray-800 py-2">
-            RESPONSIVA PARA DISPOSITIVOS MÓVILES DE TIENDAS OXXO
-          </h1>
-
-          <div className="text-sm leading-relaxed space-y-4 font-serif">
-            <p>
-              A través de esta carta declara cadena comercial Oxxo a <strong><u>{nombreEmp}</u></strong> ser el único responsable de los dispositivos móviles que se le proporcionan por parte de Cadena Comercial Oxxo para el uso exclusivo en el ejercicio de sus funciones y bajo solicitud autorizada.
+          {/* Header: logo OXXO + PLAZA */}
+          <div className="flex items-start justify-between mb-10">
+            <img src="/logo.png" alt="OXXO" className="h-16 w-16 object-contain" />
+            <p className="text-lg font-black tracking-wide">
+              PLAZA <u className="px-2 min-w-[120px] inline-block">{plaza || '_______________'}</u>
             </p>
-            <p>
-              Del mismo modo acepta la responsabilidad de dar buen uso, mantenerlos en condiciones óptimas y bajo resguardo para un buen desempeño. En caso contrario se compromete a aceptar las sanciones correspondientes que el reglamento interno de Cadena Comercial OXXO establece, así como realizar el pago por daños directos e indirectos ocasionados por mal uso.
-            </p>
-            <p>Se anexa la relación de equipos que se entregan.</p>
           </div>
 
-          <table className="w-full border-collapse border border-gray-800 mt-6 mb-6 text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-800 px-3 py-2 text-left">Marca</th>
-                <th className="border border-gray-800 px-3 py-2 text-left">Modelo</th>
-                <th className="border border-gray-800 px-3 py-2 text-left">Tipo</th>
-                <th className="border border-gray-800 px-3 py-2 text-left">No. Serie</th>
-                <th className="border border-gray-800 px-3 py-2 text-left">Código de Barras</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-gray-800 px-3 py-2">{marca}</td>
-                <td className="border border-gray-800 px-3 py-2">{modelo}</td>
-                <td className="border border-gray-800 px-3 py-2 capitalize">{tipo}</td>
-                <td className="border border-gray-800 px-3 py-2">{serie}</td>
-                <td className="border border-gray-800 px-3 py-2">{cb}</td>
-              </tr>
-            </tbody>
-          </table>
+          {/* Fecha */}
+          <p className="text-sm mb-10">
+            <u className="px-1 min-w-[160px] inline-block">{ciudad}</u>
+            {', a '}
+            <u className="px-1 min-w-[140px] inline-block">{fmtDate(rev.fecha_revision)}</u>
+          </p>
 
+          {/* Cuerpo */}
+          <p className="text-sm leading-relaxed mb-10">
+            Hago entrega para uso laboral{' '}
+            <strong>
+              de Computadora de escritorio{' '}
+              <u className="px-1">{descripcion || '___________________________'}</u>
+            </strong>
+            , para el buen uso y al servicio de la Compañía{' '}
+            <strong>CADENA COMERCIAL OXXO, S.A. DE C. V.</strong>
+          </p>
+
+          {/* Datos del activo */}
+          <div className="space-y-3 mb-10 text-sm">
+            <p>
+              <strong>NUMERO DE ACTIVO:</strong>{' '}
+              <u className="px-2 min-w-[180px] inline-block">{noActivo}</u>
+            </p>
+            <p>
+              <strong>NÚMERO DE SERIE:</strong>{' '}
+              <u className="px-2 min-w-[180px] inline-block">{serie}</u>
+            </p>
+          </div>
+
+          {/* Daños y comentarios — sección adicional si existen */}
           {Array.isArray(eq.danos) && eq.danos.length > 0 && (
-            <div className="mb-6 p-3 bg-amber-50 border border-amber-300 rounded text-sm">
+            <div className="mb-8 p-3 border border-gray-400 rounded text-xs">
               <p className="font-semibold mb-1">Daños o desperfectos registrados:</p>
               <ul className="list-disc pl-4 space-y-0.5">
                 {eq.danos.map((d, i) => (
@@ -109,40 +108,51 @@ export default function CartaResponsivaEquipo() {
               </ul>
             </div>
           )}
+          {eq.comentarios && (
+            <p className="text-xs mb-8 text-gray-600">Comentarios: <em>{eq.comentarios}</em></p>
+          )}
 
-          {eq.comentarios && <p className="text-sm mb-6">Comentarios: <em>{eq.comentarios}</em></p>}
-
-          <p className="text-sm mb-8">Cadena Comercial Oxxo, Plaza <strong>{plaza || '___________________'}</strong>.</p>
-
-          {/* Signatures */}
-          <div className="grid grid-cols-2 gap-12 mt-8">
+          {/* Firmas: ENTREGA | RECIBE */}
+          <div className="grid grid-cols-2 gap-12 mb-10">
+            {/* ENTREGA — Gerente Regional RH */}
             <div className="text-center">
-              {eq.firma_empleado
-                ? <img src={eq.firma_empleado} alt="Firma empleado" className="h-24 mx-auto border-b-2 border-gray-800 mb-2 max-w-full" />
-                : <div className="h-24 border-b-2 border-gray-800 mb-2" />
+              <p className="text-sm font-bold mb-8">ENTREGA</p>
+              {eq.firma_responsable_rh
+                ? <img src={eq.firma_responsable_rh} alt="Firma RH" className="h-20 mx-auto border-b-2 border-gray-800 mb-1 max-w-full object-contain" />
+                : <div className="h-20 border-b-2 border-gray-800 mb-1" />
               }
-              <p className="text-sm font-semibold">{nombreEmp}</p>
-              <p className="text-xs text-gray-500">Nombre y firma del empleado</p>
+              <p className="text-sm font-bold">GERENTE REGIONAL RH</p>
+              {nombreRH && <p className="text-xs text-gray-600 mt-0.5">{nombreRH}</p>}
             </div>
+
+            {/* RECIBE — empleado */}
             <div className="text-center">
-              {eq.firma_auditor
-                ? <img src={eq.firma_auditor} alt="Firma auditor" className="h-24 mx-auto border-b-2 border-gray-800 mb-2 max-w-full" />
-                : <div className="h-24 border-b-2 border-gray-800 mb-2" />
+              <p className="text-sm font-bold mb-8">RECIBE</p>
+              {eq.firma_empleado
+                ? <img src={eq.firma_empleado} alt="Firma empleado" className="h-20 mx-auto border-b-2 border-gray-800 mb-1 max-w-full object-contain" />
+                : <div className="h-20 border-b-2 border-gray-800 mb-1" />
               }
-              <p className="text-sm font-semibold">{nombreAuditor}</p>
-              <p className="text-xs text-gray-500">Nombre y firma ATI</p>
+              <p className="text-xs"><strong>Nombre:</strong> {nombreEmp}</p>
+              <p className="text-xs"><strong>Puesto:</strong> {puesto || '—'}</p>
             </div>
           </div>
 
-          {/* Security footer */}
-          <div className="mt-6 pt-4 border-t border-gray-300 flex items-start gap-4">
-            {qrSrc && <img src={qrSrc} alt="QR verificación" className="w-20 h-20 shrink-0" />}
-            <div className="text-[9px] text-gray-500 space-y-0.5 flex-1">
+          {/* TESTIGO */}
+          <div className="text-center mb-10">
+            <p className="text-sm font-bold mb-8">TESTIGO</p>
+            <div className="h-16 border-b-2 border-gray-800 mb-1 max-w-[200px] mx-auto" />
+            <p className="text-sm font-bold">GTE JR. ADMINISTRATIVO</p>
+          </div>
+
+          {/* Pie de seguridad */}
+          <div className="mt-8 pt-4 border-t border-gray-300 flex items-start gap-4">
+            {qrSrc && <img src={qrSrc} alt="QR verificación" className="w-16 h-16 shrink-0" />}
+            <div className="text-[8px] text-gray-500 space-y-0.5 flex-1">
               <p className="font-semibold text-gray-700">Validez y autenticidad del documento</p>
               <p>Folio: <strong>{folio}</strong> · Generado: {fmtFull(rev.fecha_revision)}</p>
-              <p>Auditor: {nombreAuditor}</p>
+              <p>Responsable RH: {nombreRH}</p>
               <p className="font-mono break-all">SHA-256: {hash.slice(0, 32)}...</p>
-              <p className="mt-1">Este documento fue generado digitalmente mediante el Sistema de Control de Herramienta de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento. Verifique en el QR adjunto.</p>
+              <p className="mt-1">Documento generado digitalmente por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF. Verifique autenticidad en el QR adjunto.</p>
             </div>
           </div>
         </div>
