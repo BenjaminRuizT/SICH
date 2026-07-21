@@ -14,8 +14,16 @@ export default function useVersionCheck() {
     };
 
     check();
-    const id = setInterval(check, 5 * 60 * 1000);
-    return () => clearInterval(id);
+    const id = setInterval(check, 60 * 1000); // cada 60 segundos
+
+    // También verificar cuando el usuario regresa a la pestaña
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   return updateAvailable;

@@ -1,4 +1,4 @@
-# build-trigger: 2026-07-20b
+# build-trigger: 2026-07-20c
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./frontend/
