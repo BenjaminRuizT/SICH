@@ -9,7 +9,16 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
   const autoSave = useCallback(() => {
     clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      if (canvasRef.current) onSave(canvasRef.current.toDataURL('image/jpeg', 0.85));
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const tmp = document.createElement('canvas');
+      tmp.width = canvas.width;
+      tmp.height = canvas.height;
+      const ctx2 = tmp.getContext('2d');
+      ctx2.fillStyle = '#ffffff';
+      ctx2.fillRect(0, 0, tmp.width, tmp.height);
+      ctx2.drawImage(canvas, 0, 0);
+      onSave(tmp.toDataURL('image/jpeg', 0.85));
     }, 800);
   }, [onSave]);
 
