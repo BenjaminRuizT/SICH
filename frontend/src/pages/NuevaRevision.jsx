@@ -181,6 +181,8 @@ export default function NuevaRevision() {
     api.get('/herramientas/catalog').then(r => setCatalog(r.data)).catch(() => {});
   }, []);
 
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [paso]);
+
   // Detecta cuando el usuario navega a /nueva estando ya en /nueva (location.key cambia)
   useEffect(() => {
     if (isInitialMount.current) { isInitialMount.current = false; return; }
