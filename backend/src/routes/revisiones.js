@@ -23,8 +23,9 @@ router.post('/', requireAuth, async (req, res) => {
            codigo_barras,kilometraje,poliza_seguro,licencia_numero,llanta_refaccion,comentarios,
            foto_condiciones,foto_licencia,foto_tarjeta_circulacion,
            danos,firma_empleado,firma_auditor,
-           no_modelo,gato_cruceta,foto_licencia_reverso,foto_poliza_seguro)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+           no_modelo,gato_cruceta,foto_licencia_reverso,foto_poliza_seguro,
+           domicilio,codigo_postal)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)`,
         [rev.id, auto.herramienta_id || null, JSON.stringify(auto.herramienta_snapshot || {}),
          auto.no_serie, auto.placas, auto.codigo_barras, auto.kilometraje,
          auto.poliza_seguro != null ? String(auto.poliza_seguro) : null,
@@ -35,7 +36,8 @@ router.post('/', requireAuth, async (req, res) => {
          JSON.stringify(auto.danos || []),
          auto.firma_empleado || null, auto.firma_auditor || null,
          auto.no_modelo || null, auto.gato_cruceta != null ? Boolean(auto.gato_cruceta) : null,
-         auto.foto_licencia_reverso || null, auto.foto_poliza_seguro || null]
+         auto.foto_licencia_reverso || null, auto.foto_poliza_seguro || null,
+         auto.domicilio || null, auto.codigo_postal || null]
       );
     }
 

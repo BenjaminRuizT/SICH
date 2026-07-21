@@ -87,7 +87,7 @@ export default function CartaResponsivaAuto() {
 
           <div className="text-xs leading-relaxed space-y-3 font-serif">
             <p>
-              <strong>1.1</strong> Convenio de uso de herramienta de trabajo que celebran por una parte Cadena Comercial Oxxo a quien en lo sucesivo se le denominará "la empresa" y por la otra <u className="px-1">{nombreEmp}</u> con domicilio en <u className="px-1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> C.P <u className="px-1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>. a quien en lo sucesivo se denominará "el empleado" y manifiestan que celebran el presente al tenor de las siguientes
+              <strong>1.1</strong> Convenio de uso de herramienta de trabajo que celebran por una parte Cadena Comercial Oxxo a quien en lo sucesivo se le denominará "la empresa" y por la otra <u className="px-1">{nombreEmp}</u> con domicilio en <u className="px-1">{auto.domicilio || '                                    '}</u> C.P <u className="px-1">{auto.codigo_postal || '      '}</u>. a quien en lo sucesivo se denominará "el empleado" y manifiestan que celebran el presente al tenor de las siguientes
             </p>
             <p className="text-center font-bold tracking-widest">D E C L A R A C I O N E S</p>
             <p><strong>I.</strong> Declara que su representada es una sociedad mercantil establecida conforme a las leyes mexicanas, y que dentro de su objeto social, se establece la posibilidad de celebrar contratos y convenios.</p>
