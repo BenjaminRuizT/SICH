@@ -48,13 +48,13 @@ export default function CartaResponsivaEquipo() {
   const snap = eq.herramienta_snapshot || {};
 
   const plaza = emp.plaza || '';
-  const ciudad = plaza || 'Tijuana';
+  const ciudad = plaza || 'Tijuana, B.C.';
   const nombreEmp = emp.nombre_completo || rev.nombre_completo || '';
   const puesto = emp.posicion || '';
   const marca = eq.marca || snap.marca || '';
   const modelo = eq.modelo || snap.modelo || '';
   const descripcion = [marca, modelo].filter(Boolean).join(' ');
-  const noActivo = snap.no_activo || eq.codigo_barras || '—';
+  const codigoBarras = eq.codigo_barras || snap.codigo_barras || '—';
   const serie = eq.serie || snap.serie || '—';
   const nombreRH = eq.nombre_responsable_rh || rev.auditor_nombre || '';
   const folio = fmtFolio(rev.id);
@@ -69,18 +69,17 @@ export default function CartaResponsivaEquipo() {
       <div className="max-w-2xl mx-auto print:max-w-none p-8 print:p-0 pt-20 print:pt-0">
         <div className="bg-white shadow-md print:shadow-none p-12 print:p-10 min-h-screen print:min-h-0">
 
-          {/* Header: logo OXXO + PLAZA */}
-          <div className="flex items-start justify-between mb-10">
-            <img src="/logo.png" alt="OXXO" className="h-16 w-16 object-contain" />
-            <p className="text-lg font-black tracking-wide">
+          {/* Header: logo OXXO + PLAZA centrado */}
+          <div className="flex items-center mb-10">
+            <img src="/oxxo.png" alt="OXXO" className="h-14 w-auto object-contain shrink-0" />
+            <p className="flex-1 text-center text-lg font-black tracking-wide">
               PLAZA <u className="px-2 min-w-[120px] inline-block">{plaza || '_______________'}</u>
             </p>
           </div>
 
-          {/* Fecha */}
-          <p className="text-sm mb-10">
-            <u className="px-1 min-w-[160px] inline-block">{ciudad}</u>
-            {', a '}
+          {/* Fecha — alineada a la derecha */}
+          <p className="text-sm mb-10 text-right">
+            {ciudad}{', a '}
             <u className="px-1 min-w-[140px] inline-block">{fmtDate(rev.fecha_revision)}</u>
           </p>
 
@@ -95,11 +94,11 @@ export default function CartaResponsivaEquipo() {
             <strong>CADENA COMERCIAL OXXO, S.A. DE C. V.</strong>
           </p>
 
-          {/* Datos del activo */}
-          <div className="space-y-3 mb-10 text-sm">
+          {/* Datos del activo — centrados */}
+          <div className="space-y-3 mb-10 text-sm text-center">
             <p>
               <strong>NUMERO DE ACTIVO:</strong>{' '}
-              <u className="px-2 min-w-[180px] inline-block">{noActivo}</u>
+              <u className="px-2 min-w-[180px] inline-block">{codigoBarras}</u>
             </p>
             <p>
               <strong>NÚMERO DE SERIE:</strong>{' '}
@@ -154,7 +153,7 @@ export default function CartaResponsivaEquipo() {
               ? <img src={eq.firma_auditor} alt="Firma auditor" className="h-16 mx-auto border-b-2 border-gray-800 mb-1 max-w-[200px] object-contain" />
               : <div className="h-16 border-b-2 border-gray-800 mb-1 max-w-[200px] mx-auto" />
             }
-            <p className="text-sm font-bold">GTE JR. ADMINISTRATIVO</p>
+            <p className="text-sm font-bold">AUDITOR</p>
             {rev.auditor_nombre && <p className="text-xs text-gray-600 mt-0.5">{rev.auditor_nombre}</p>}
           </div>
 
