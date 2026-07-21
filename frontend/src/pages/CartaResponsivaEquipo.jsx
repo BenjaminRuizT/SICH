@@ -130,7 +130,7 @@ export default function CartaResponsivaEquipo() {
                 ? <img src={eq.firma_responsable_rh} alt="Firma RH" className="h-20 mx-auto border-b-2 border-gray-800 mb-1 max-w-full object-contain" />
                 : <div className="h-20 border-b-2 border-gray-800 mb-1" />
               }
-              <p className="text-sm font-bold">GERENTE REGIONAL RH</p>
+              <p className="text-sm font-bold">RESPONSABLE DE RH</p>
               {nombreRH && <p className="text-xs text-gray-600 mt-0.5">{nombreRH}</p>}
             </div>
 
