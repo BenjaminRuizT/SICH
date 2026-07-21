@@ -266,7 +266,12 @@ router.put('/config', requireAdmin, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 router.post('/reset', requireAdmin, async (req, res) => {
-  const { keep_historial = false, keep_herramientas = false, keep_empleados = false } = req.body;
+  const {
+    keep_historial = false,
+    keep_herramientas = false,
+    keep_empleados = false,
+    limpiar_fotos = true,
+  } = req.body;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -274,29 +279,52 @@ router.post('/reset', requireAdmin, async (req, res) => {
       await client.query('DELETE FROM revision_auto');
       await client.query('DELETE FROM revision_equipo');
       await client.query('DELETE FROM revisiones');
+    } else if (limpiar_fotos) {
+      // Conserva registros pero elimina todo el contenido binario (fotos y firmas)
+      await client.query(`
+        UPDATE revision_auto SET
+          foto_condiciones      = '[]',
+          foto_licencia         = NULL,
+          foto_licencia_reverso = NULL,
+          foto_tarjeta_circulacion = NULL,
+          foto_poliza_seguro    = NULL,
+          firma_empleado        = NULL,
+          firma_auditor         = NULL,
+          firma_responsable_rh  = NULL
+      `);
+      await client.query(`
+        UPDATE revision_equipo SET
+          foto_equipo          = NULL,
+          firma_empleado       = NULL,
+          firma_auditor        = NULL,
+          firma_responsable_rh = NULL
+      `);
     }
     if (!keep_herramientas) {
       await client.query('DELETE FROM herramientas');
     }
     if (!keep_empleados && !keep_herramientas) {
-      // Solo borrar empleados si también se borraron herramientas (FK)
       await client.query('DELETE FROM empleados');
     }
     await client.query('COMMIT');
 
-    const counts = {};
     const [r, h, e] = await Promise.all([
       client.query('SELECT COUNT(*) FROM revisiones'),
       client.query('SELECT COUNT(*) FROM herramientas'),
       client.query('SELECT COUNT(*) FROM empleados'),
     ]);
-    counts.revisiones = parseInt(r.rows[0].count);
-    counts.herramientas = parseInt(h.rows[0].count);
-    counts.empleados = parseInt(e.rows[0].count);
-    res.json({ ok: true, remaining: counts });
-  } catch (e) {
+    res.json({
+      ok: true,
+      remaining: {
+        revisiones: parseInt(r.rows[0].count),
+        herramientas: parseInt(h.rows[0].count),
+        empleados: parseInt(e.rows[0].count),
+      },
+    });
+  } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: e.message });
+    console.error('POST /reset:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   } finally { client.release(); }
 });
 

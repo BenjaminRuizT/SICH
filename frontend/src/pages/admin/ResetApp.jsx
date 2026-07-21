@@ -2,7 +2,7 @@ import { useState } from 'react';
 import api from '../../context/AuthContext';
 
 export default function ResetApp() {
-  const [opts, setOpts] = useState({ keep_historial: false, keep_herramientas: false, keep_empleados: false });
+  const [opts, setOpts] = useState({ keep_historial: false, keep_herramientas: false, keep_empleados: false, limpiar_fotos: true });
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -49,12 +49,28 @@ export default function ResetApp() {
               <span className="text-sm">{icon} {label}</span>
             </label>
           ))}
+
+          {opts.keep_historial && (
+            <label className="flex items-start gap-3 cursor-pointer mt-1 pl-2 border-l-2 border-amber-300">
+              <input type="checkbox" checked={opts.limpiar_fotos} onChange={() => toggle('limpiar_fotos')}
+                className="w-5 h-5 rounded accent-amber-600 mt-0.5" />
+              <span className="text-sm">
+                🗜 <strong>Limpiar fotos y firmas</strong> de los registros conservados
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  Elimina el contenido binario (fotos y firmas) pero conserva los datos de texto de cada revisión.
+                </span>
+              </span>
+            </label>
+          )}
         </div>
 
         {/* Preview de lo que se borrará */}
         <div className="bg-red-50 rounded-xl px-4 py-3 text-sm space-y-1">
           <p className="font-semibold text-red-800 text-xs uppercase tracking-wide mb-2">Se eliminará:</p>
           {borrar.historial && <p className="text-red-700">• Todas las revisiones y sus fotos/firmas</p>}
+          {!borrar.historial && opts.keep_historial && opts.limpiar_fotos && (
+            <p className="text-amber-700">• Fotos y firmas de todos los registros de revisión</p>
+          )}
           {borrar.herramientas && <p className="text-red-700">• Todas las herramientas del catálogo</p>}
           {borrar.empleados && <p className="text-red-700">• Todos los empleados del catálogo</p>}
           {!borrar.historial && !borrar.herramientas && !borrar.empleados && (
