@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import SignatureCanvas from '../../components/SignatureCanvas';
+import { fixSignatureBg } from '../../utils/signatureUtils';
 
 export default function Configuracion() {
   const [minutes, setMinutes] = useState('');
@@ -16,10 +17,18 @@ export default function Configuracion() {
 
   useEffect(() => {
     axios.get('/api/admin/config')
-      .then(r => {
+      .then(async r => {
         setMinutes(r.data.inactivity_minutes || '20');
         setRhNombre(r.data.nombre_responsable_rh || '');
-        setRhFirmaActual(r.data.firma_responsable_rh || null);
+        const rawFirma = r.data.firma_responsable_rh || null;
+        if (rawFirma) {
+          const fixedFirma = await fixSignatureBg(rawFirma);
+          setRhFirmaActual(fixedFirma);
+          // Si la firma cambió (tenía fondo negro), re-guardar automáticamente
+          if (fixedFirma !== rawFirma) {
+            axios.put('/api/admin/config', { firma_responsable_rh: fixedFirma }).catch(() => {});
+          }
+        }
       })
       .catch(() => setMinutes('20'))
       .finally(() => setLoading(false));

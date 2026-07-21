@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../context/AuthContext';
 import { generateDocHash, generateQR, fmtFolio } from '../utils/docSecurity';
+import { fixSignatureBg } from '../utils/signatureUtils';
 
 function fmtFull(date) {
   if (!date) return '—';
@@ -22,8 +23,17 @@ export default function CartaResponsivaEquipo() {
 
   useEffect(() => {
     api.get(`/revisiones/${id}`).then(async r => {
-      setRev(r.data);
-      const h = await generateDocHash(r.data);
+      const data = r.data;
+      if (data.equipo) {
+        const eq = data.equipo;
+        [eq.firma_empleado, eq.firma_auditor, eq.firma_responsable_rh] = await Promise.all([
+          fixSignatureBg(eq.firma_empleado),
+          fixSignatureBg(eq.firma_auditor),
+          fixSignatureBg(eq.firma_responsable_rh),
+        ]);
+      }
+      setRev(data);
+      const h = await generateDocHash(data);
       setHash(h);
       const url = `${window.location.origin}/verificar/${id}?h=${h.slice(0, 16)}`;
       setQrSrc(await generateQR(url));
