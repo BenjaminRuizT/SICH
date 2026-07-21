@@ -36,10 +36,27 @@ router.get('/search', requireAuth, async (req, res) => {
     const params = [`%${q}%`];
     let query = `SELECT id, tipo, codigo_barras, no_activo, marca, modelo, anio, serie, placas
                  FROM herramientas WHERE codigo_barras ILIKE $1 AND is_active=true`;
-    if (tipo) { params.push(tipo); query += ` AND tipo=$${params.length}`; }
+    if (tipo === 'equipo') {
+      query += ` AND tipo IN ('laptop','computo')`;
+    } else if (tipo) {
+      params.push(tipo); query += ` AND tipo=$${params.length}`;
+    }
     query += ' ORDER BY codigo_barras LIMIT 10';
     const { rows } = await pool.query(query, params);
     res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Valores distintos de marca/modelo para equipos (para autocomplete en formulario)
+router.get('/catalog', requireAuth, async (req, res) => {
+  try {
+    const { rows: marcas } = await pool.query(
+      `SELECT DISTINCT marca FROM herramientas WHERE tipo IN ('laptop','computo') AND marca IS NOT NULL AND marca <> '' ORDER BY marca`
+    );
+    const { rows: modelos } = await pool.query(
+      `SELECT DISTINCT modelo FROM herramientas WHERE tipo IN ('laptop','computo') AND modelo IS NOT NULL AND modelo <> '' ORDER BY modelo`
+    );
+    res.json({ marcas: marcas.map(r => r.marca), modelos: modelos.map(r => r.modelo) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -245,16 +245,25 @@ router.get('/config', requireAdmin, async (req, res) => {
 
 router.put('/config', requireAdmin, async (req, res) => {
   try {
-    const allowed = ['inactivity_minutes'];
+    const numericKeys = ['inactivity_minutes'];
+    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh'];
+    const allowed = [...numericKeys, ...stringKeys];
     const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
+
     for (const [key, value] of updates) {
-      const parsed = parseInt(value);
-      if (isNaN(parsed) || parsed < 1 || parsed > 480)
-        return res.status(400).json({ error: `Valor inválido para ${key}` });
+      let storedValue;
+      if (numericKeys.includes(key)) {
+        const parsed = parseInt(value);
+        if (isNaN(parsed) || parsed < 1 || parsed > 480)
+          return res.status(400).json({ error: `Valor inválido para ${key}` });
+        storedValue = String(parsed);
+      } else {
+        storedValue = String(value ?? '');
+      }
       await pool.query(
         `INSERT INTO app_config(key, value) VALUES($1, $2)
          ON CONFLICT (key) DO UPDATE SET value=$2`,
-        [key, String(parsed)]
+        [key, storedValue]
       );
     }
     res.json({ ok: true });

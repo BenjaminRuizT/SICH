@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../context/AuthContext';
 import PhotoCapture from '../components/PhotoCapture';
@@ -86,6 +86,45 @@ const MODELOS_AUTO = [
   'BYD Dolphin mini',
 ];
 
+function SuggestInput({ label, value, onChange, suggestions, required, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const filtered = value.length > 0
+    ? suggestions.filter(s => s.toLowerCase().includes(value.toLowerCase()) && s !== value)
+    : suggestions;
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <label className="label">{label}{required && <span className="text-red-500 ml-1">*</span>}</label>
+      <input
+        className="input"
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+          {filtered.map(s => (
+            <button key={s} type="button"
+              onClick={() => { onChange(s); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-brand-50 text-sm border-b border-gray-100 last:border-0">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const emptyAuto = {
   codigo_barras: '', no_modelo: '', no_serie: '', placas: '', kilometraje: '',
   domicilio: '', codigo_postal: '',
@@ -103,6 +142,7 @@ const emptyEquipo = {
   danos: [], firma_empleado: null, firma_auditor: null,
   nombre_responsable_rh: '', firma_responsable_rh: null,
 };
+
 
 export default function NuevaRevision() {
   const navigate = useNavigate();
@@ -123,9 +163,19 @@ export default function NuevaRevision() {
   const [sending, setSending] = useState(false);
   const [savedId, setSavedId] = useState(null);
   const [config, setConfig] = useState({});
+  const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null });
+  const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
 
   useEffect(() => {
-    api.get('/config').then(r => setConfig(r.data)).catch(() => {});
+    api.get('/config').then(r => {
+      setConfig(r.data);
+      const nombre = r.data.nombre_responsable_rh || '';
+      const firma = r.data.firma_responsable_rh || null;
+      setRhConfig({ nombre, firma });
+      setAutoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
+      setEquipoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
+    }).catch(() => {});
+    api.get('/herramientas/catalog').then(r => setCatalog(r.data)).catch(() => {});
   }, []);
 
   const buscar = useCallback(async (q) => {
@@ -182,8 +232,6 @@ export default function NuevaRevision() {
     if (autoForm.gato_cruceta === null) e.gato_cruceta = 'Requerido';
     if (!autoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
     if (!autoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
-    if (!autoForm.nombre_responsable_rh) e.nombre_responsable_rh = 'Requerido';
-    if (!autoForm.firma_responsable_rh) e.firma_responsable_rh = 'Firma requerida';
     return e;
   };
 
@@ -194,8 +242,6 @@ export default function NuevaRevision() {
     if (!equipoForm.modelo) e.modelo = 'Requerido';
     if (!equipoForm.serie) e.serie = 'Requerido';
     if (!equipoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
-    if (!equipoForm.nombre_responsable_rh) e.nombre_responsable_rh = 'Requerido';
-    if (!equipoForm.firma_responsable_rh) e.firma_responsable_rh = 'Firma requerida';
     return e;
   };
 
@@ -208,14 +254,7 @@ export default function NuevaRevision() {
       const errs = validateAuto();
       if (Object.keys(errs).length) { setErrors(errs); return; }
       setErrors({});
-      if (revisarEquipo) {
-        setEquipoForm(f => ({
-          ...f,
-          nombre_responsable_rh: f.nombre_responsable_rh || autoForm.nombre_responsable_rh,
-          firma_responsable_rh: f.firma_responsable_rh || autoForm.firma_responsable_rh,
-        }));
-        setPaso(4); return;
-      }
+      if (revisarEquipo) { setPaso(4); return; }
       setPaso(5);
     } else if (paso === 4) {
       const errs = validateEquipo();
@@ -274,6 +313,23 @@ export default function NuevaRevision() {
   }
 
   const Err = ({ field }) => errors[field] ? <p className="text-red-500 text-xs mt-1">{errors[field]}</p> : null;
+
+  if (!rhConfig.nombre || !rhConfig.firma) {
+    return (
+      <div className="md:ml-56 max-w-lg">
+        <div className="card border-amber-200 bg-amber-50 space-y-3">
+          <p className="text-lg font-bold text-amber-800">⚠️ Configuración incompleta</p>
+          <p className="text-sm text-amber-700">
+            Para realizar auditorías es necesario configurar el nombre y firma del Responsable de RH.
+            Esta información se imprimirá en todas las cartas responsivas.
+          </p>
+          <Link to="/admin" className="btn-primary inline-block text-center">
+            Ir a Administración → Configuración
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="md:ml-56 max-w-2xl">
@@ -529,24 +585,13 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
               onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor (registro interno)" signerName={nombreAuditor}
+            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
               onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
             <Err field="firma_auditor" />
           </div>
 
-          {/* Responsable de RH */}
-          <div className="card space-y-4">
-            <p className="font-semibold text-sm text-gray-700">Responsable de RH</p>
-            <div>
-              <label className="label">Nombre del responsable de RH<span className="text-red-500 ml-1">*</span></label>
-              <input className="input" type="text" value={autoForm.nombre_responsable_rh}
-                onChange={e => setAutoForm(p => ({ ...p, nombre_responsable_rh: e.target.value }))}
-                placeholder="Nombre completo..." />
-              <Err field="nombre_responsable_rh" />
-            </div>
-            <SignatureCanvas label="Firma del responsable de RH" signerName={autoForm.nombre_responsable_rh}
-              onSave={v => setAutoForm(p => ({ ...p, firma_responsable_rh: v }))} />
-            <Err field="firma_responsable_rh" />
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+            ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
           </div>
 
           {Object.keys(errors).length > 0 && (
@@ -567,7 +612,7 @@ export default function NuevaRevision() {
         <div className="space-y-4">
           <h2 className="text-xl font-bold">Revisión del equipo de cómputo</h2>
 
-          <BarcodeSearch tipo="laptop" currentCb={equipoForm.codigo_barras}
+          <BarcodeSearch tipo="equipo" currentCb={equipoForm.codigo_barras}
             onSelect={item => {
               setEquipoSelec(item);
               setEquipoForm(f => ({
@@ -580,14 +625,24 @@ export default function NuevaRevision() {
             }} />
           <Err field="codigo_barras" />
 
-          {[['marca','Marca'],['modelo','Modelo'],['serie','No. de Serie']].map(([k, lbl]) => (
-            <div key={k}>
-              <label className="label">{lbl}<span className="text-red-500 ml-1">*</span></label>
-              <input className="input" value={equipoForm[k]}
-                onChange={e => setEquipoForm(p => ({ ...p, [k]: e.target.value }))} />
-              <Err field={k} />
-            </div>
-          ))}
+          <SuggestInput label="Marca" value={equipoForm.marca} required
+            suggestions={catalog.marcas}
+            placeholder="Ej. HP, Dell, Lenovo..."
+            onChange={v => setEquipoForm(p => ({ ...p, marca: v }))} />
+          <Err field="marca" />
+
+          <SuggestInput label="Modelo" value={equipoForm.modelo} required
+            suggestions={catalog.modelos}
+            placeholder="Ej. 840G8, Latitude 5420..."
+            onChange={v => setEquipoForm(p => ({ ...p, modelo: v }))} />
+          <Err field="modelo" />
+
+          <div>
+            <label className="label">No. de Serie<span className="text-red-500 ml-1">*</span></label>
+            <input className="input" value={equipoForm.serie}
+              onChange={e => setEquipoForm(p => ({ ...p, serie: e.target.value }))} />
+            <Err field="serie" />
+          </div>
 
           {/* Damage panel */}
           <div className="card">
@@ -614,29 +669,12 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor (Testigo — GTE Jr. Administrativo)" signerName={nombreAuditor}
+            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
               onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
           </div>
 
-          {/* Responsable de RH */}
-          <div className="card space-y-4 border-2 border-brand-200">
-            <p className="font-semibold text-sm text-gray-700">Responsable de RH — requerido para carta</p>
-            {equipoForm.firma_responsable_rh && (
-              <div className="flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-                <img src={equipoForm.firma_responsable_rh} alt="Firma RH" className="h-10 object-contain" />
-                <p className="text-xs text-green-700">Firma cargada del paso anterior. Firme abajo para reemplazarla.</p>
-              </div>
-            )}
-            <div>
-              <label className="label">Nombre del responsable de RH<span className="text-red-500 ml-1">*</span></label>
-              <input className="input" type="text" value={equipoForm.nombre_responsable_rh}
-                onChange={e => setEquipoForm(p => ({ ...p, nombre_responsable_rh: e.target.value }))}
-                placeholder="Nombre completo..." />
-              <Err field="nombre_responsable_rh" />
-            </div>
-            <SignatureCanvas label="Firma del responsable de RH" signerName={equipoForm.nombre_responsable_rh}
-              onSave={v => setEquipoForm(p => ({ ...p, firma_responsable_rh: v }))} />
-            <Err field="firma_responsable_rh" />
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+            ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
           </div>
 
           {Object.keys(errors).length > 0 && (
