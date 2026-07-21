@@ -58,7 +58,7 @@ function BarcodeSearch({ tipo, onSelect, currentCb }) {
 
   return (
     <div className="relative" ref={ref}>
-      <label className="label">Código de barras<span className="text-red-500 ml-1">*</span></label>
+      <label className="label">Código de barras <span className="text-gray-400 font-normal text-xs">(opcional)</span></label>
       <input className="input" value={q}
         onChange={e => search(e.target.value)}
         placeholder="Escanea o escribe el código de barras..."
@@ -232,7 +232,6 @@ export default function NuevaRevision() {
 
   const validateAuto = () => {
     const e = {};
-    if (!autoForm.codigo_barras) e.codigo_barras = 'Requerido';
     if (!autoForm.no_modelo) e.no_modelo = 'Requerido';
     if (!autoForm.placas) e.placas = 'Requerido';
     if (!autoForm.no_serie) e.no_serie = 'Requerido';
@@ -249,7 +248,6 @@ export default function NuevaRevision() {
 
   const validateEquipo = () => {
     const e = {};
-    if (!equipoForm.codigo_barras) e.codigo_barras = 'Requerido';
     if (!equipoForm.marca) e.marca = 'Requerido';
     if (!equipoForm.modelo) e.modelo = 'Requerido';
     if (!equipoForm.serie) e.serie = 'Requerido';
