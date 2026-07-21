@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 
-function compressImage(file, maxPx = 1200, quality = 0.8) {
+function compressImage(file, maxPx = 1200, quality = 0.78) {
   return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
+      URL.revokeObjectURL(url);
       let { width: w, height: h } = img;
       if (w > maxPx || h > maxPx) {
         if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
@@ -14,7 +16,8 @@ function compressImage(file, maxPx = 1200, quality = 0.8) {
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL('image/jpeg', quality));
     };
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
   });
 }
 

@@ -614,7 +614,7 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor (registro interno)" signerName={nombreAuditor}
+            <SignatureCanvas label="Firma del auditor (Testigo — GTE Jr. Administrativo)" signerName={nombreAuditor}
               onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
           </div>
 

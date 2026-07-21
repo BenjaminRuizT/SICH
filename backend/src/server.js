@@ -5,11 +5,25 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
+const { requireAuth } = require('./middleware/auth');
+
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
 
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  },
+}));
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
 app.use(express.json({ limit: '20mb' }));
 app.use(cookieParser());
@@ -22,16 +36,18 @@ app.use('/api/usuarios', require('./routes/appUsers'));
 app.use('/api/exportar', require('./routes/exportar'));
 app.use('/api/admin', require('./routes/admin'));
 
-app.get('/api/config', async (req, res) => {
+app.get('/api/config', requireAuth, async (req, res) => {
   const pool = require('./db');
-  const { rows } = await pool.query('SELECT key,value FROM app_config');
-  const config = {};
-  rows.forEach(r => { try { config[r.key] = JSON.parse(r.value); } catch { config[r.key] = r.value; } });
-  res.json(config);
+  try {
+    const { rows } = await pool.query('SELECT key,value FROM app_config');
+    const config = {};
+    rows.forEach(r => { try { config[r.key] = JSON.parse(r.value); } catch { config[r.key] = r.value; } });
+    res.json(config);
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, env: process.env.NODE_ENV }));
-app.get('/api/version', (req, res) => res.json({ version: '2.0.0' }));
+app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/version', (req, res) => res.json({ version: '2.1.0' }));
 
 // Verificación pública de documentos (sin auth)
 app.get('/api/verificar/:id', async (req, res) => {
@@ -44,7 +60,7 @@ app.get('/api/verificar/:id', async (req, res) => {
        WHERE r.id=$1`, [req.params.id]);
     if (!rev) return res.status(404).json({ error: 'Documento no encontrado' });
     res.json(rev);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 if (isProd) {

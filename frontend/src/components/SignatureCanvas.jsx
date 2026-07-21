@@ -9,7 +9,7 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
   const autoSave = useCallback(() => {
     clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => {
-      if (canvasRef.current) onSave(canvasRef.current.toDataURL('image/png'));
+      if (canvasRef.current) onSave(canvasRef.current.toDataURL('image/jpeg', 0.85));
     }, 800);
   }, [onSave]);
 

@@ -31,19 +31,26 @@ router.get('/', requireAdmin, async (req, res) => {
 router.post('/', requireAdmin, async (req, res) => {
   try {
     const { username, password, nombre, rol } = req.body;
+    if (!['admin', 'auditor'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
+    if (!password || password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
     const hash = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
       'INSERT INTO app_users(username,password_hash,nombre,rol) VALUES($1,$2,$3,$4) RETURNING id,username,nombre,rol',
       [username, hash, nombre, rol]
     );
     res.status(201).json(rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    if (e.code === '23505') return res.status(400).json({ error: 'El usuario ya existe' });
+    res.status(400).json({ error: 'Error al crear usuario' });
+  }
 });
 
 router.patch('/:id', requireAdmin, async (req, res) => {
   try {
     const { nombre, rol, is_active, password } = req.body;
+    if (rol !== undefined && !['admin', 'auditor'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
     if (password) {
+      if (password.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
       const hash = await bcrypt.hash(password, 10);
       await pool.query('UPDATE app_users SET password_hash=$1 WHERE id=$2', [hash, req.params.id]);
     }
@@ -52,7 +59,7 @@ router.patch('/:id', requireAdmin, async (req, res) => {
       [nombre, rol, is_active, req.params.id]
     );
     res.json(rows[0]);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch { res.status(400).json({ error: 'Error al actualizar usuario' }); }
 });
 
 router.delete('/:id', requireAdmin, async (req, res) => {

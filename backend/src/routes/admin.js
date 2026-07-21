@@ -206,7 +206,7 @@ router.get('/herramientas/:id', requireAdmin, async (req, res) => {
 // Herramientas sin revisión
 // ---------------------------------------------------------------------------
 
-router.get('/sin-validar', requireAuth, async (req, res) => {
+router.get('/sin-validar', requireAdmin, async (req, res) => {
   try {
     const { tipo, plaza } = req.query;
     let q = `

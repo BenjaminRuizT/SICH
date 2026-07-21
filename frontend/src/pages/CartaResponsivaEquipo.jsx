@@ -137,11 +137,15 @@ export default function CartaResponsivaEquipo() {
             </div>
           </div>
 
-          {/* TESTIGO */}
+          {/* TESTIGO — Auditor */}
           <div className="text-center mb-10">
             <p className="text-sm font-bold mb-8">TESTIGO</p>
-            <div className="h-16 border-b-2 border-gray-800 mb-1 max-w-[200px] mx-auto" />
+            {eq.firma_auditor
+              ? <img src={eq.firma_auditor} alt="Firma auditor" className="h-16 mx-auto border-b-2 border-gray-800 mb-1 max-w-[200px] object-contain" />
+              : <div className="h-16 border-b-2 border-gray-800 mb-1 max-w-[200px] mx-auto" />
+            }
             <p className="text-sm font-bold">GTE JR. ADMINISTRATIVO</p>
+            {rev.auditor_nombre && <p className="text-xs text-gray-600 mt-0.5">{rev.auditor_nombre}</p>}
           </div>
 
           {/* Pie de seguridad */}

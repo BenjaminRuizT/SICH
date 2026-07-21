@@ -61,9 +61,10 @@ router.post('/', requireAuth, async (req, res) => {
 
     await client.query('COMMIT');
     res.status(201).json({ ok: true, id: rev.id });
-  } catch (e) {
+  } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: e.message });
+    console.error('POST /revisiones:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
   } finally { client.release(); }
 });
 
@@ -72,21 +73,20 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, empleado, desde, hasta } = req.query;
     const offset = (page - 1) * limit;
-    let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.tiene_auto, r.tiene_equipo, r.status,
+    const from = `FROM revisiones r LEFT JOIN empleados e ON r.empleado_id = e.id WHERE 1=1`;
+    const filterParams = [];
+    let where = '';
+    if (empleado) { filterParams.push(`%${empleado}%`); where += ` AND (e.nombre_completo ILIKE $${filterParams.length} OR e.numero_empleado ILIKE $${filterParams.length})`; }
+    if (desde) { filterParams.push(desde); where += ` AND r.fecha_revision >= $${filterParams.length}`; }
+    if (hasta) { filterParams.push(hasta); where += ` AND r.fecha_revision <= $${filterParams.length}`; }
+    const selectParams = [...filterParams, limit, offset];
+    const q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.tiene_auto, r.tiene_equipo, r.status,
               e.nombre_completo, e.numero_empleado, e.plaza
-             FROM revisiones r
-             LEFT JOIN empleados e ON r.empleado_id = e.id
-             WHERE 1=1`;
-    const params = [];
-    if (empleado) { params.push(`%${empleado}%`); q += ` AND (e.nombre_completo ILIKE $${params.length} OR e.numero_empleado ILIKE $${params.length})`; }
-    if (desde) { params.push(desde); q += ` AND r.fecha_revision >= $${params.length}`; }
-    if (hasta) { params.push(hasta); q += ` AND r.fecha_revision <= $${params.length}`; }
-    q += ` ORDER BY r.fecha_revision DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
-    const { rows } = await pool.query(q, params);
-    const count = await pool.query('SELECT COUNT(*) FROM revisiones');
+             ${from}${where} ORDER BY r.fecha_revision DESC LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`;
+    const { rows } = await pool.query(q, selectParams);
+    const count = await pool.query(`SELECT COUNT(*) ${from}${where}`, filterParams);
     res.json({ rows, total: parseInt(count.rows[0].count) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 // Detalle revisión (incluyendo firmas y daños para carta responsiva)
@@ -100,7 +100,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     const autoR = await pool.query('SELECT * FROM revision_auto WHERE revision_id=$1', [req.params.id]);
     const equipoR = await pool.query('SELECT * FROM revision_equipo WHERE revision_id=$1', [req.params.id]);
     res.json({ ...rev.rows[0], auto: autoR.rows[0] || null, equipo: equipoR.rows[0] || null });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 module.exports = router;
