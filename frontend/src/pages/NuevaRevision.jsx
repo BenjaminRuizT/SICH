@@ -131,7 +131,7 @@ const emptyAuto = {
   poliza_seguro: null, licencia: null, llanta_refaccion: null, gato_cruceta: null,
   comentarios: '',
   foto_condiciones: [], foto_licencia: null, foto_licencia_reverso: null,
-  foto_tarjeta_circulacion: null, foto_poliza_seguro: null,
+  foto_tarjeta_circulacion: null, foto_poliza_seguro: null, foto_llanta_refaccion: null,
   danos: [], firma_empleado: null, firma_auditor: null,
   nombre_responsable_rh: '', firma_responsable_rh: null,
 };
@@ -572,17 +572,50 @@ export default function NuevaRevision() {
               placeholder="Ej. 22000" maxLength={5} />
           </div>
 
-          <YesNo label="Póliza de seguro" value={autoForm.poliza_seguro}
-            onChange={v => setAutoForm(p => ({ ...p, poliza_seguro: v }))} required />
-          <Err field="poliza_seguro" />
+          <div>
+            <YesNo label="Póliza de seguro" value={autoForm.poliza_seguro}
+              onChange={v => setAutoForm(p => ({ ...p, poliza_seguro: v, ...(!v ? { foto_poliza_seguro: null } : {}) }))} required />
+            <Err field="poliza_seguro" />
+            {autoForm.poliza_seguro === true && (
+              <div className="mt-3">
+                <PhotoCapture label="Foto de póliza de seguro"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_poliza_seguro: v }))}
+                  value={autoForm.foto_poliza_seguro} />
+              </div>
+            )}
+          </div>
 
-          <YesNo label="Licencia de conducir" value={autoForm.licencia}
-            onChange={v => setAutoForm(p => ({ ...p, licencia: v }))} required />
-          <Err field="licencia" />
+          <div>
+            <YesNo label="Licencia de conducir" value={autoForm.licencia}
+              onChange={v => setAutoForm(p => ({ ...p, licencia: v, ...(!v ? { foto_licencia: null, foto_licencia_reverso: null } : {}) }))} required />
+            <Err field="licencia" />
+            {autoForm.licencia === true && (
+              <div className="mt-3">
+                <p className="label mb-2">Fotos de licencia de conducir</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <PhotoCapture label="Frente"
+                    onCapture={v => setAutoForm(p => ({ ...p, foto_licencia: v }))}
+                    value={autoForm.foto_licencia} />
+                  <PhotoCapture label="Reverso"
+                    onCapture={v => setAutoForm(p => ({ ...p, foto_licencia_reverso: v }))}
+                    value={autoForm.foto_licencia_reverso} />
+                </div>
+              </div>
+            )}
+          </div>
 
-          <YesNo label="Llanta de refacción" value={autoForm.llanta_refaccion}
-            onChange={v => setAutoForm(p => ({ ...p, llanta_refaccion: v }))} required />
-          <Err field="llanta_refaccion" />
+          <div>
+            <YesNo label="Llanta de refacción" value={autoForm.llanta_refaccion}
+              onChange={v => setAutoForm(p => ({ ...p, llanta_refaccion: v, ...(!v ? { foto_llanta_refaccion: null } : {}) }))} required />
+            <Err field="llanta_refaccion" />
+            {autoForm.llanta_refaccion === true && (
+              <div className="mt-3">
+                <PhotoCapture label="Foto de llanta de refacción"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_llanta_refaccion: v }))}
+                  value={autoForm.foto_llanta_refaccion} />
+              </div>
+            )}
+          </div>
 
           <YesNo label="Gato / Cruceta" value={autoForm.gato_cruceta}
             onChange={v => setAutoForm(p => ({ ...p, gato_cruceta: v }))} required />
@@ -603,27 +636,9 @@ export default function NuevaRevision() {
           </div>
 
           <div>
-            <p className="label">Licencia de conducir</p>
-            <div className="grid grid-cols-2 gap-3">
-              <PhotoCapture label="Frente"
-                onCapture={v => setAutoForm(p => ({ ...p, foto_licencia: v }))}
-                value={autoForm.foto_licencia} />
-              <PhotoCapture label="Reverso"
-                onCapture={v => setAutoForm(p => ({ ...p, foto_licencia_reverso: v }))}
-                value={autoForm.foto_licencia_reverso} />
-            </div>
-          </div>
-
-          <div>
             <PhotoCapture label="Tarjeta de circulación"
               onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))}
               value={autoForm.foto_tarjeta_circulacion} />
-          </div>
-
-          <div>
-            <PhotoCapture label="Póliza de seguro"
-              onCapture={v => setAutoForm(p => ({ ...p, foto_poliza_seguro: v }))}
-              value={autoForm.foto_poliza_seguro} />
           </div>
 
           <div>
@@ -772,6 +787,7 @@ export default function NuevaRevision() {
                 {autoForm.foto_licencia_reverso && <span className="text-green-600">✓ Licencia reverso</span>}
                 {autoForm.foto_tarjeta_circulacion && <span className="text-green-600">✓ Tarjeta circ.</span>}
                 {autoForm.foto_poliza_seguro && <span className="text-green-600">✓ Póliza seguro</span>}
+                {autoForm.foto_llanta_refaccion && <span className="text-green-600">✓ Llanta ref.</span>}
                 {autoForm.danos.length > 0 && <span className="text-orange-600">⚠ {autoForm.danos.length} daño(s)</span>}
                 {autoForm.firma_empleado && <span className="text-green-600">✓ Firma empleado</span>}
                 {autoForm.firma_auditor && <span className="text-green-600">✓ Firma auditor</span>}
