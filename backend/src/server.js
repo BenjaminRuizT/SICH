@@ -47,7 +47,7 @@ app.get('/api/config', requireAuth, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('/api/version', (req, res) => res.json({ version: '2.3.0' }));
+app.get('/api/version', (req, res) => res.json({ version: '2.4.0' }));
 
 // Verificación pública de documentos (sin auth)
 app.get('/api/verificar/:id', async (req, res) => {
