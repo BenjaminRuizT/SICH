@@ -15,10 +15,15 @@ export default function Configuracion() {
   const [rhSaving, setRhSaving] = useState(false);
   const [rhMsg, setRhMsg] = useState(null);
 
+  const [ciudad, setCiudad] = useState('');
+  const [ciudadSaving, setCiudadSaving] = useState(false);
+  const [ciudadMsg, setCiudadMsg] = useState(null);
+
   useEffect(() => {
     axios.get('/api/admin/config')
       .then(async r => {
         setMinutes(r.data.inactivity_minutes || '20');
+        setCiudad(r.data.ciudad_revision || '');
         setRhNombre(r.data.nombre_responsable_rh || '');
         const rawFirma = r.data.firma_responsable_rh || null;
         if (rawFirma) {
@@ -49,6 +54,19 @@ export default function Configuracion() {
     } catch (err) {
       setMsg({ type: 'error', text: err.response?.data?.error || 'Error al guardar' });
     } finally { setSaving(false); }
+  };
+
+  const saveCiudad = async (e) => {
+    e.preventDefault();
+    if (!ciudad.trim()) { setCiudadMsg({ type: 'error', text: 'Ingresa la ciudad.' }); return; }
+    setCiudadSaving(true);
+    setCiudadMsg(null);
+    try {
+      await axios.put('/api/admin/config', { ciudad_revision: ciudad.trim() });
+      setCiudadMsg({ type: 'ok', text: 'Ciudad guardada. Aparecerá en las cartas responsivas.' });
+    } catch (err) {
+      setCiudadMsg({ type: 'error', text: err.response?.data?.error || 'Error al guardar' });
+    } finally { setCiudadSaving(false); }
   };
 
   const saveRH = async (e) => {
@@ -125,6 +143,34 @@ export default function Configuracion() {
 
           <button type="submit" disabled={rhSaving} className="btn-primary w-auto px-6">
             {rhSaving ? 'Guardando...' : 'Guardar Responsable de RH'}
+          </button>
+        </form>
+      </div>
+
+      {/* Ciudad de la revisión */}
+      <div className="card space-y-4">
+        <h2 className="font-semibold text-gray-700">Ciudad de la revisión</h2>
+        <p className="text-sm text-gray-500">
+          Ciudad que aparecerá en las cartas responsivas (Ej. Tijuana, B.C. / Ensenada, B.C.).
+        </p>
+        <form onSubmit={saveCiudad} className="space-y-4">
+          <div>
+            <label className="label">Ciudad<span className="text-red-500 ml-1">*</span></label>
+            <input
+              className="input"
+              type="text"
+              value={ciudad}
+              onChange={e => setCiudad(e.target.value)}
+              placeholder="Ej. Tijuana, B.C."
+            />
+          </div>
+          {ciudadMsg && (
+            <p className={`text-sm rounded-lg px-3 py-2 ${ciudadMsg.type === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {ciudadMsg.text}
+            </p>
+          )}
+          <button type="submit" disabled={ciudadSaving} className="btn-primary w-auto px-6">
+            {ciudadSaving ? 'Guardando...' : 'Guardar ciudad'}
           </button>
         </form>
       </div>

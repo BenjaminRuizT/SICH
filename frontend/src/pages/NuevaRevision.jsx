@@ -129,6 +129,7 @@ const emptyAuto = {
   codigo_barras: '', no_modelo: '', no_serie: '', placas: '', kilometraje: '',
   domicilio: '', codigo_postal: '',
   poliza_seguro: null, licencia: null, llanta_refaccion: null, gato_cruceta: null,
+  tarjeta_circulacion: null,
   comentarios: '',
   foto_condiciones: [], foto_licencia: null, foto_licencia_reverso: null,
   foto_tarjeta_circulacion: null, foto_poliza_seguro: null, foto_llanta_refaccion: null,
@@ -243,6 +244,7 @@ export default function NuevaRevision() {
     if (autoForm.licencia === null) e.licencia = 'Requerido';
     if (autoForm.llanta_refaccion === null) e.llanta_refaccion = 'Requerido';
     if (autoForm.gato_cruceta === null) e.gato_cruceta = 'Requerido';
+    if (autoForm.tarjeta_circulacion === null) e.tarjeta_circulacion = 'Requerido';
     if (!autoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
     if (!autoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
     return e;
@@ -627,18 +629,25 @@ export default function NuevaRevision() {
             <DamagePanel type="auto" value={autoForm.danos} onChange={v => setAutoForm(p => ({ ...p, danos: v }))} />
           </div>
 
+          <div>
+            <YesNo label="Tarjeta de circulación" value={autoForm.tarjeta_circulacion}
+              onChange={v => setAutoForm(p => ({ ...p, tarjeta_circulacion: v, ...(!v ? { foto_tarjeta_circulacion: null } : {}) }))} required />
+            <Err field="tarjeta_circulacion" />
+            {autoForm.tarjeta_circulacion === true && (
+              <div className="mt-3">
+                <PhotoCapture label="Foto de tarjeta de circulación"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))}
+                  value={autoForm.foto_tarjeta_circulacion} />
+              </div>
+            )}
+          </div>
+
           {/* Photos */}
           <div>
             <PhotoCapture label="Fotos de condiciones del auto" multiple maxPhotos={5}
               onCapture={v => setAutoForm(p => ({ ...p, foto_condiciones: v }))}
               value={autoForm.foto_condiciones}
               sublabel="Máximo 5 fotos — opcional" />
-          </div>
-
-          <div>
-            <PhotoCapture label="Tarjeta de circulación"
-              onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))}
-              value={autoForm.foto_tarjeta_circulacion} />
           </div>
 
           <div>
@@ -780,6 +789,7 @@ export default function NuevaRevision() {
                 <span>Licencia: <b>{autoForm.licencia == null ? '—' : autoForm.licencia ? 'Sí' : 'No'}</b></span>
                 <span>Llanta ref.: <b>{autoForm.llanta_refaccion == null ? '—' : autoForm.llanta_refaccion ? 'Sí' : 'No'}</b></span>
                 <span>Gato/Cruceta: <b>{autoForm.gato_cruceta == null ? '—' : autoForm.gato_cruceta ? 'Sí' : 'No'}</b></span>
+                <span>Tarjeta circ.: <b>{autoForm.tarjeta_circulacion == null ? '—' : autoForm.tarjeta_circulacion ? 'Sí' : 'No'}</b></span>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 {autoForm.foto_condiciones?.length > 0 && <span className="text-green-600">✓ {autoForm.foto_condiciones.length} foto(s)</span>}

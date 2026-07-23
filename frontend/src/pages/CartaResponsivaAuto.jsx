@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../context/AuthContext';
-import { generateDocHash, generateQR, fmtFolio } from '../utils/docSecurity';
+import { generateDocHash, fmtFolio } from '../utils/docSecurity';
 import { fixSignatureBg } from '../utils/signatureUtils';
 
 function fmt(date) {
@@ -21,7 +21,6 @@ export default function CartaResponsivaAuto() {
   const [rev, setRev] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hash, setHash] = useState('');
-  const [qrSrc, setQrSrc] = useState('');
 
   useEffect(() => {
     api.get(`/revisiones/${id}`).then(async r => {
@@ -37,9 +36,6 @@ export default function CartaResponsivaAuto() {
       setRev(data);
       const h = await generateDocHash(data);
       setHash(h);
-      const origin = window.location.origin;
-      const url = `${origin}/verificar/${id}?h=${h.slice(0, 16)}`;
-      setQrSrc(await generateQR(url));
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
@@ -86,10 +82,10 @@ export default function CartaResponsivaAuto() {
                 <td className="border border-gray-800 text-center font-black text-base px-3 py-1 text-red-700" colSpan="2" rowSpan="2">
                   CARTA COMPROMISO
                 </td>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03 &nbsp;·&nbsp; ELABORADO: {nombreAuditor}</td>
               </tr>
               <tr>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5">ELABORADO: 09/May/03</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5">Fecha de auditoría: {fmt(rev.fecha_revision)}</td>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">Hoja 1 de 2</td>
               </tr>
             </tbody>
@@ -148,10 +144,10 @@ export default function CartaResponsivaAuto() {
                 <td className="border border-gray-800 text-center font-black text-base px-3 py-1 text-red-700" colSpan="2" rowSpan="2">
                   CARTA COMPROMISO
                 </td>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03 &nbsp;·&nbsp; ELABORADO: {nombreAuditor}</td>
               </tr>
               <tr>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5">ELABORADO: 09/May/03</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5">Fecha de auditoría: {fmt(rev.fecha_revision)}</td>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">Hoja 2 de 2</td>
               </tr>
             </tbody>
@@ -220,14 +216,13 @@ export default function CartaResponsivaAuto() {
             </div>
 
             {/* Security footer */}
-            <div className="mt-6 pt-4 border-t border-gray-300 flex items-start gap-4">
-              {qrSrc && <img src={qrSrc} alt="QR verificación" className="w-20 h-20 shrink-0" />}
-              <div className="text-[9px] text-gray-500 space-y-0.5 flex-1">
+            <div className="mt-6 pt-4 border-t border-gray-300">
+              <div className="text-[9px] text-gray-500 space-y-0.5">
                 <p className="font-semibold text-gray-700">Validez y autenticidad del documento</p>
                 <p>Folio: <strong>{folio}</strong> · Generado: {fmtFull(rev.fecha_revision)}</p>
                 <p>Auditor: {nombreAuditor}</p>
-                <p className="font-mono break-all">SHA-256: {hash.slice(0, 32)}...</p>
-                <p className="mt-1">Este documento fue generado digitalmente mediante el Sistema de Control de Herramienta de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento. Verifique en el QR adjunto.</p>
+                <p className="font-mono break-all">SHA-256: {hash}</p>
+                <p className="mt-1">Este documento fue generado digitalmente mediante el Sistema de Control de Herramienta de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento.</p>
               </div>
             </div>
           </div>

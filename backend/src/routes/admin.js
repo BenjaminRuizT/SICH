@@ -246,7 +246,7 @@ router.get('/config', requireAdmin, async (req, res) => {
 router.put('/config', requireAdmin, async (req, res) => {
   try {
     const numericKeys = ['inactivity_minutes'];
-    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh'];
+    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh', 'ciudad_revision'];
     const allowed = [...numericKeys, ...stringKeys];
     const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
 
@@ -288,6 +288,7 @@ router.post('/reset', requireAdmin, async (req, res) => {
       await client.query('DELETE FROM revision_auto');
       await client.query('DELETE FROM revision_equipo');
       await client.query('DELETE FROM revisiones');
+      await client.query('ALTER SEQUENCE revisiones_id_seq RESTART WITH 1');
     } else if (limpiar_fotos) {
       // Conserva registros pero elimina todo el contenido binario (fotos y firmas)
       await client.query(`

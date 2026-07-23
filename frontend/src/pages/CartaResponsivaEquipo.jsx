@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../context/AuthContext';
-import { generateDocHash, generateQR, fmtFolio } from '../utils/docSecurity';
+import { generateDocHash, fmtFolio } from '../utils/docSecurity';
 import { fixSignatureBg } from '../utils/signatureUtils';
 
 function fmtFull(date) {
@@ -19,9 +19,10 @@ export default function CartaResponsivaEquipo() {
   const [rev, setRev] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hash, setHash] = useState('');
-  const [qrSrc, setQrSrc] = useState('');
+  const [ciudadConfig, setCiudadConfig] = useState('');
 
   useEffect(() => {
+    api.get('/config').then(r => setCiudadConfig(r.data.ciudad_revision || '')).catch(() => {});
     api.get(`/revisiones/${id}`).then(async r => {
       const data = r.data;
       if (data.equipo) {
@@ -35,8 +36,6 @@ export default function CartaResponsivaEquipo() {
       setRev(data);
       const h = await generateDocHash(data);
       setHash(h);
-      const url = `${window.location.origin}/verificar/${id}?h=${h.slice(0, 16)}`;
-      setQrSrc(await generateQR(url));
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
@@ -48,7 +47,7 @@ export default function CartaResponsivaEquipo() {
   const snap = eq.herramienta_snapshot || {};
 
   const plaza = emp.plaza || '';
-  const ciudad = plaza || 'Tijuana, B.C.';
+  const ciudad = ciudadConfig || plaza || 'Tijuana, B.C.';
   const nombreEmp = emp.nombre_completo || rev.nombre_completo || '';
   const puesto = emp.posicion || '';
   const marca = eq.marca || snap.marca || '';
@@ -158,14 +157,13 @@ export default function CartaResponsivaEquipo() {
           </div>
 
           {/* Pie de seguridad */}
-          <div className="mt-8 pt-4 border-t border-gray-300 flex items-start gap-4">
-            {qrSrc && <img src={qrSrc} alt="QR verificación" className="w-16 h-16 shrink-0" />}
-            <div className="text-[8px] text-gray-500 space-y-0.5 flex-1">
+          <div className="mt-8 pt-4 border-t border-gray-300">
+            <div className="text-[8px] text-gray-500 space-y-0.5">
               <p className="font-semibold text-gray-700">Validez y autenticidad del documento</p>
               <p>Folio: <strong>{folio}</strong> · Generado: {fmtFull(rev.fecha_revision)}</p>
               <p>Responsable RH: {nombreRH}</p>
-              <p className="font-mono break-all">SHA-256: {hash.slice(0, 32)}...</p>
-              <p className="mt-1">Documento generado digitalmente por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF. Verifique autenticidad en el QR adjunto.</p>
+              <p className="font-mono break-all">SHA-256: {hash}</p>
+              <p className="mt-1">Documento generado digitalmente por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF.</p>
             </div>
           </div>
         </div>
