@@ -256,6 +256,7 @@ export default function NuevaRevision() {
     if (!equipoForm.modelo) e.modelo = 'Requerido';
     if (!equipoForm.serie) e.serie = 'Requerido';
     if (!equipoForm.firma_empleado) e.firma_empleado = 'Firma requerida';
+    if (!equipoForm.firma_auditor) e.firma_auditor = 'Firma requerida';
     return e;
   };
 
@@ -748,6 +749,7 @@ export default function NuevaRevision() {
             <Err field="firma_empleado" />
             <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
               onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+            <Err field="firma_auditor" />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
