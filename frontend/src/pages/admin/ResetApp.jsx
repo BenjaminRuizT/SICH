@@ -2,7 +2,14 @@ import { useState } from 'react';
 import api from '../../context/AuthContext';
 
 export default function ResetApp() {
-  const [opts, setOpts] = useState({ keep_historial: false, keep_herramientas: false, keep_empleados: false, limpiar_fotos: true });
+  const [opts, setOpts] = useState({
+    keep_historial: false,
+    keep_herramientas: false,
+    keep_empleados: false,
+    limpiar_fotos: false,
+    limpiar_imagenes: false,
+    resetear_folios: false,
+  });
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -39,9 +46,9 @@ export default function ResetApp() {
         <p className="text-sm font-semibold text-gray-700">¿Qué deseas conservar?</p>
         <div className="space-y-3">
           {[
-            { key: 'keep_historial',    label: 'Conservar historial de revisiones', icon: '📋' },
-            { key: 'keep_herramientas', label: 'Conservar herramientas (MAF)',       icon: '🔧' },
-            { key: 'keep_empleados',    label: 'Conservar empleados',               icon: '👥' },
+            { key: 'keep_historial',    label: 'Conservar historial de revisiones (cartas responsivas)', icon: '📋' },
+            { key: 'keep_herramientas', label: 'Conservar herramientas (MAF)',                          icon: '🔧' },
+            { key: 'keep_empleados',    label: 'Conservar empleados',                                   icon: '👥' },
           ].map(({ key, label, icon }) => (
             <label key={key} className="flex items-center gap-3 cursor-pointer group">
               <input type="checkbox" checked={opts[key]} onChange={() => toggle(key)}
@@ -51,29 +58,58 @@ export default function ResetApp() {
           ))}
 
           {opts.keep_historial && (
-            <label className="flex items-start gap-3 cursor-pointer mt-1 pl-2 border-l-2 border-amber-300">
-              <input type="checkbox" checked={opts.limpiar_fotos} onChange={() => toggle('limpiar_fotos')}
-                className="w-5 h-5 rounded accent-amber-600 mt-0.5" />
-              <span className="text-sm">
-                🗜 <strong>Limpiar fotos y firmas</strong> de los registros conservados
-                <span className="block text-xs text-gray-500 mt-0.5">
-                  Elimina el contenido binario (fotos y firmas) pero conserva los datos de texto de cada revisión.
+            <div className="mt-1 pl-2 border-l-2 border-amber-300 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={opts.limpiar_imagenes} onChange={() => setOpts(o => ({ ...o, limpiar_imagenes: !o.limpiar_imagenes, limpiar_fotos: false }))}
+                  className="w-5 h-5 rounded accent-amber-600 mt-0.5" />
+                <span className="text-sm">
+                  🖼 <strong>Eliminar imágenes</strong> de los registros conservados
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Elimina solo las fotos capturadas (condiciones, licencia, etc.). Conserva las firmas.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={opts.limpiar_fotos} onChange={() => setOpts(o => ({ ...o, limpiar_fotos: !o.limpiar_fotos, limpiar_imagenes: false }))}
+                  className="w-5 h-5 rounded accent-amber-600 mt-0.5" />
+                <span className="text-sm">
+                  🗜 <strong>Eliminar imágenes y firmas</strong> de los registros conservados
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Elimina todo el contenido binario (fotos y firmas) pero conserva los datos de texto.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={opts.resetear_folios} onChange={() => toggle('resetear_folios')}
+                  className="w-5 h-5 rounded accent-red-600 mt-0.5" />
+                <span className="text-sm">
+                  🔢 <strong>Resetear numeración de folios</strong> (SICH-000001)
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Reinicia el contador de folios. Los registros existentes conservan su folio actual.
+                  </span>
+                </span>
+              </label>
+            </div>
           )}
         </div>
 
         {/* Preview de lo que se borrará */}
         <div className="bg-red-50 rounded-xl px-4 py-3 text-sm space-y-1">
-          <p className="font-semibold text-red-800 text-xs uppercase tracking-wide mb-2">Se eliminará:</p>
-          {borrar.historial && <p className="text-red-700">• Todas las revisiones y sus fotos/firmas</p>}
-          {!borrar.historial && opts.keep_historial && opts.limpiar_fotos && (
-            <p className="text-amber-700">• Fotos y firmas de todos los registros de revisión</p>
+          <p className="font-semibold text-red-800 text-xs uppercase tracking-wide mb-2">Se eliminará / modificará:</p>
+          {borrar.historial && <p className="text-red-700">• Todas las revisiones (cartas responsivas) y sus fotos/firmas</p>}
+          {!borrar.historial && opts.limpiar_fotos && (
+            <p className="text-amber-700">• Imágenes y firmas de todos los registros de revisión</p>
           )}
+          {!borrar.historial && !opts.limpiar_fotos && opts.limpiar_imagenes && (
+            <p className="text-amber-700">• Imágenes (fotos) de todos los registros de revisión</p>
+          )}
+          {opts.resetear_folios && !borrar.historial && (
+            <p className="text-amber-700">• Numeración de folios reiniciada (SICH-000001)</p>
+          )}
+          {borrar.historial && <p className="text-red-700">• Numeración de folios reiniciada (SICH-000001)</p>}
           {borrar.herramientas && <p className="text-red-700">• Todas las herramientas del catálogo</p>}
           {borrar.empleados && <p className="text-red-700">• Todos los empleados del catálogo</p>}
-          {!borrar.historial && !borrar.herramientas && !borrar.empleados && (
+          {!borrar.historial && !borrar.herramientas && !borrar.empleados && !opts.limpiar_fotos && !opts.limpiar_imagenes && !opts.resetear_folios && (
             <p className="text-gray-500 italic">Nada (todo conservado)</p>
           )}
         </div>

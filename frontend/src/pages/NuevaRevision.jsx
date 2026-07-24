@@ -165,7 +165,7 @@ export default function NuevaRevision() {
   const [sending, setSending] = useState(false);
   const [savedId, setSavedId] = useState(null);
   const [config, setConfig] = useState({});
-  const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null });
+  const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null, ciudad: '' });
   const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
   const [confirmReset, setConfirmReset] = useState(false);
   const isInitialMount = useRef(true);
@@ -175,7 +175,8 @@ export default function NuevaRevision() {
       setConfig(r.data);
       const nombre = r.data.nombre_responsable_rh || '';
       const firma = r.data.firma_responsable_rh || null;
-      setRhConfig({ nombre, firma });
+      const ciudad = r.data.ciudad_revision || '';
+      setRhConfig({ nombre, firma, ciudad });
       setAutoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
       setEquipoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
     }).catch(() => {});
@@ -346,17 +347,24 @@ export default function NuevaRevision() {
 
   const Err = ({ field }) => errors[field] ? <p className="text-red-500 text-xs mt-1">{errors[field]}</p> : null;
 
-  if (!rhConfig.nombre || !rhConfig.firma) {
+  if (!rhConfig.nombre || !rhConfig.firma || !rhConfig.ciudad) {
+    const faltantes = [
+      !rhConfig.nombre && 'nombre del Responsable de RH',
+      !rhConfig.firma  && 'firma del Responsable de RH',
+      !rhConfig.ciudad && 'ciudad de la revisión',
+    ].filter(Boolean);
     return (
       <div className="md:ml-56 max-w-lg">
         <div className="card border-amber-200 bg-amber-50 space-y-3">
           <p className="text-lg font-bold text-amber-800">⚠️ Configuración incompleta</p>
           <p className="text-sm text-amber-700">
-            Para realizar auditorías es necesario configurar el nombre y firma del Responsable de RH.
-            Esta información se imprimirá en todas las cartas responsivas.
+            Para realizar auditorías es necesario completar la configuración. Falta configurar:
           </p>
-          <Link to="/admin" className="btn-primary inline-block text-center">
-            Ir a Administración → Configuración
+          <ul className="list-disc pl-5 text-sm text-amber-700 space-y-1">
+            {faltantes.map(f => <li key={f}>{f}</li>)}
+          </ul>
+          <Link to="/admin/configuracion" className="btn-primary inline-block text-center">
+            Ir a Configuración
           </Link>
         </div>
       </div>

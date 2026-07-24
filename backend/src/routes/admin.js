@@ -279,7 +279,9 @@ router.post('/reset', requireAdmin, async (req, res) => {
     keep_historial = false,
     keep_herramientas = false,
     keep_empleados = false,
-    limpiar_fotos = true,
+    limpiar_fotos = false,
+    limpiar_imagenes = false,
+    resetear_folios = false,
   } = req.body;
   const client = await pool.connect();
   try {
@@ -289,26 +291,42 @@ router.post('/reset', requireAdmin, async (req, res) => {
       await client.query('DELETE FROM revision_equipo');
       await client.query('DELETE FROM revisiones');
       await client.query('ALTER SEQUENCE revisiones_id_seq RESTART WITH 1');
-    } else if (limpiar_fotos) {
-      // Conserva registros pero elimina todo el contenido binario (fotos y firmas)
-      await client.query(`
-        UPDATE revision_auto SET
-          foto_condiciones      = '[]',
-          foto_licencia         = NULL,
-          foto_licencia_reverso = NULL,
-          foto_tarjeta_circulacion = NULL,
-          foto_poliza_seguro    = NULL,
-          firma_empleado        = NULL,
-          firma_auditor         = NULL,
-          firma_responsable_rh  = NULL
-      `);
-      await client.query(`
-        UPDATE revision_equipo SET
-          foto_equipo          = NULL,
-          firma_empleado       = NULL,
-          firma_auditor        = NULL,
-          firma_responsable_rh = NULL
-      `);
+    } else {
+      if (limpiar_fotos) {
+        // Elimina fotos Y firmas de todos los registros
+        await client.query(`
+          UPDATE revision_auto SET
+            foto_condiciones      = '[]',
+            foto_licencia         = NULL,
+            foto_licencia_reverso = NULL,
+            foto_tarjeta_circulacion = NULL,
+            foto_poliza_seguro    = NULL,
+            firma_empleado        = NULL,
+            firma_auditor         = NULL,
+            firma_responsable_rh  = NULL
+        `);
+        await client.query(`
+          UPDATE revision_equipo SET
+            foto_equipo          = NULL,
+            firma_empleado       = NULL,
+            firma_auditor        = NULL,
+            firma_responsable_rh = NULL
+        `);
+      } else if (limpiar_imagenes) {
+        // Elimina solo fotos, conserva firmas
+        await client.query(`
+          UPDATE revision_auto SET
+            foto_condiciones      = '[]',
+            foto_licencia         = NULL,
+            foto_licencia_reverso = NULL,
+            foto_tarjeta_circulacion = NULL,
+            foto_poliza_seguro    = NULL
+        `);
+        await client.query(`UPDATE revision_equipo SET foto_equipo = NULL`);
+      }
+      if (resetear_folios) {
+        await client.query('ALTER SEQUENCE revisiones_id_seq RESTART WITH 1');
+      }
     }
     if (!keep_herramientas) {
       await client.query('DELETE FROM herramientas');

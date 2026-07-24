@@ -82,7 +82,7 @@ export default function CartaResponsivaAuto() {
                 <td className="border border-gray-800 text-center font-black text-base px-3 py-1 text-red-700" colSpan="2" rowSpan="2">
                   CARTA COMPROMISO
                 </td>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03 &nbsp;·&nbsp; ELABORADO: {nombreAuditor}</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01. ELABORADO: 09/May/03</td>
               </tr>
               <tr>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">Fecha de auditoría: {fmt(rev.fecha_revision)}</td>
@@ -144,7 +144,7 @@ export default function CartaResponsivaAuto() {
                 <td className="border border-gray-800 text-center font-black text-base px-3 py-1 text-red-700" colSpan="2" rowSpan="2">
                   CARTA COMPROMISO
                 </td>
-                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01 / 09/May/03 &nbsp;·&nbsp; ELABORADO: {nombreAuditor}</td>
+                <td className="border border-gray-800 text-[10px] px-2 py-0.5" colSpan="2">REVISIÓN: 01. ELABORADO: 09/May/03</td>
               </tr>
               <tr>
                 <td className="border border-gray-800 text-[10px] px-2 py-0.5">Fecha de auditoría: {fmt(rev.fecha_revision)}</td>
