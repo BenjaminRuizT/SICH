@@ -5,11 +5,25 @@ const fmt = (iso) => {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
 };
-
 const fmtDT = (iso) => {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 };
+
+const SECTIONS = [
+  { num: '01', title: 'Descripción General' },
+  { num: '02', title: 'Stack Tecnológico' },
+  { num: '03', title: 'Arquitectura del Sistema' },
+  { num: '04', title: 'Módulos Funcionales' },
+  { num: '05', title: 'Controles de Seguridad Implementados' },
+  { num: '06', title: 'Autenticación y Autorización' },
+  { num: '07', title: 'Endpoints de API' },
+  { num: '08', title: 'Esquema de Base de Datos' },
+  { num: '09', title: 'Flujo de Auditoría de Herramienta' },
+  { num: '10', title: 'Configuración del Sistema' },
+  { num: '11', title: 'Seguridad de la Información' },
+  { num: '12', title: 'Estadísticas Actuales del Sistema' },
+];
 
 const Badge = ({ color, children }) => {
   const map = {
@@ -19,14 +33,17 @@ const Badge = ({ color, children }) => {
     blue:   'bg-blue-50 text-blue-700 border border-blue-200',
     gray:   'bg-gray-100 text-gray-600 border border-gray-200',
     teal:   'bg-teal-50 text-teal-700 border border-teal-200',
+    purple: 'bg-purple-50 text-purple-700 border border-purple-200',
   };
   return <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded font-mono ${map[color] || map.gray}`}>{children}</span>;
 };
 
 const Section = ({ num, title, children }) => (
-  <section className="print-section mb-10">
+  <section id={`sec-${String(num).padStart(2, '0')}`} className="print-section mb-10 scroll-mt-6">
     <div className="flex items-baseline gap-3 mb-4 pb-2 border-b-2 border-[#134e4a]">
-      <span className="text-xs font-mono font-bold text-[#134e4a] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">{String(num).padStart(2, '0')}</span>
+      <span className="text-xs font-mono font-bold text-[#134e4a] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+        {String(num).padStart(2, '0')}
+      </span>
       <h2 className="text-base font-bold text-[#134e4a] uppercase tracking-widest">{title}</h2>
     </div>
     {children}
@@ -78,7 +95,8 @@ export default function Documentacion() {
 
   return (
     <div className="md:ml-56 print:ml-0 pb-16">
-      {/* ── ACCIONES (oculto al imprimir) ── */}
+
+      {/* ── BARRA DE ACCIONES (oculta al imprimir) ── */}
       <div className="print:hidden flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Documentación Técnica</h1>
@@ -98,7 +116,7 @@ export default function Documentacion() {
       {/* ── DOCUMENTO ── */}
       <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-8 print:shadow-none print:border-0 print:rounded-none print:p-0 max-w-5xl">
 
-        {/* PORTADA */}
+        {/* ── PORTADA ── */}
         <div className="flex items-start justify-between mb-8 pb-6 border-b-4 border-[#134e4a]">
           <div className="flex items-center gap-4">
             <img src="/oxxo.png" alt="OXXO" className="h-12 object-contain" />
@@ -109,12 +127,39 @@ export default function Documentacion() {
           </div>
           <div className="text-right">
             <h1 className="text-lg font-black text-[#134e4a] uppercase tracking-widest leading-tight">
-              Documentación<br/>Técnica del Sistema
+              Documentación<br />Técnica del Sistema
             </h1>
             <p className="text-[11px] font-mono text-gray-500 mt-1">
               SICH v{info?.version ?? '2.5.0'} · {today}
             </p>
           </div>
+        </div>
+
+        {/* ── ÍNDICE ── */}
+        <div className="mb-10 print-section">
+          <div className="flex items-baseline gap-3 mb-4 pb-2 border-b-2 border-[#134e4a]">
+            <span className="text-xs font-mono font-bold text-[#134e4a] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">—</span>
+            <h2 className="text-base font-bold text-[#134e4a] uppercase tracking-widest">Índice de Contenidos</h2>
+          </div>
+          <ol className="space-y-1">
+            {SECTIONS.map(({ num, title }) => (
+              <li key={num}>
+                <a
+                  href={`#sec-${num}`}
+                  onClick={e => {
+                    e.preventDefault();
+                    document.getElementById(`sec-${num}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="print:no-underline flex items-baseline gap-0 text-xs group hover:text-[#134e4a] text-gray-700 transition-colors"
+                >
+                  <span className="font-mono font-bold text-[#134e4a] w-8 shrink-0">{num}</span>
+                  <span className="group-hover:underline underline-offset-2">{title}</span>
+                  <span className="flex-1 border-b border-dotted border-gray-300 mx-2 mb-0.5" />
+                  <span className="font-mono text-[10px] text-gray-400 shrink-0">§ {num}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
         </div>
 
         {/* ── 01 DESCRIPCIÓN GENERAL ── */}
@@ -189,8 +234,8 @@ export default function Documentacion() {
 │            Express Server  (node:20-alpine, USER node)              │
 │  ┌──────────────┐ ┌────────────┐ ┌──────────┐ ┌─────────────────┐  │
 │  │ Helmet (CSP/ │ │    CORS    │ │  Cookie  │ │  Rate Limiters  │  │
-│  │ HSTS/XFO)   │ │ FRONTEND_  │ │  Parser  │ │  (login·pwd·    │  │
-│  └──────────────┘ │ URL only  │ └──────────┘ │   verificar)    │  │
+│  │ HSTS/XFO)   │ │ FRONTEND_  │ │  Parser  │ │  login·pwd·     │  │
+│  └──────────────┘ │ URL only  │ └──────────┘ │  verificar      │  │
 │                   └────────────┘             └─────────────────┘  │
 │  ┌─────────────────────────────────────────────────────────────┐   │
 │  │  /api/auth   /api/revisiones  /api/empleados  /api/admin   │   │
@@ -198,7 +243,7 @@ export default function Documentacion() {
 │  └──────────────────────────┬────────────────────────────────┘   │
 │                             │  Parameterized queries (no ORM)     │
 └─────────────────────────────┼───────────────────────────────────────┘
-                              │  pg + SSL (rejectUnauthorized=false)
+                              │  pg + SSL
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │              PostgreSQL 16  (Railway managed)                        │
@@ -251,7 +296,7 @@ export default function Documentacion() {
               ['Control de acceso por rol', 'Middleware requireAuth + requireAdmin en todos los endpoints sensibles', <Badge color="teal">OWASP A01:2021</Badge>],
               ['Inyección SQL', 'Parameterized queries (pg) en todas las consultas — sin concatenación', <Badge color="teal">OWASP A03:2021</Badge>],
               ['Formula injection (Excel)', "Prefijo ' en valores que inician con =+−@|% en exportación", <Badge color="teal">OWASP A03:2021</Badge>],
-              ['Límites de entrada', 'observaciones max 2000 chars · comentarios max 1000 · limit max 100 rows', <Badge color="teal">OWASP A03:2021</Badge>],
+              ['Límites de entrada', 'observaciones max 2000 chars · comentarios max 1000 · paginación max 100 rows', <Badge color="teal">OWASP A03:2021</Badge>],
               ['Auditoría de accesos', 'auth_log: evento, IP, user-agent, timestamp — login/logout/login_failed', <Badge color="teal">OWASP A09:2021</Badge>],
               ['Inactividad de sesión', 'Cierre automático configurable (default 20 min)', <Badge color="teal">OWASP A07:2021</Badge>],
               ['Error handling', 'Mensajes genéricos al cliente; detalle interno solo en logs de servidor', <Badge color="teal">OWASP A05:2021</Badge>],
@@ -353,7 +398,7 @@ export default function Documentacion() {
               ['app_users', 'Cuentas de acceso al sistema', 'id · username · password_hash · rol · is_active · last_login'],
               ['empleados', 'Catálogo de empleados OXXO', 'id · numero_empleado (UNIQUE) · nombre_completo · posicion · plaza · region'],
               ['herramientas', 'Catálogo MAF (autos y equipo de cómputo)', 'id · tipo · codigo_barras · no_activo · marca · modelo · serie · plaza · empleado_id'],
-              ['revisiones', 'Registro maestro de auditorías', 'id (SICH folio) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo'],
+              ['revisiones', 'Registro maestro de auditorías', 'id (folio SICH) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo'],
               ['revision_auto', 'Datos de revisión de vehículo', 'revision_id · herramienta_id · placas · no_serie · kilometraje · firmas (base64) · fotos (base64) · danos (JSONB)'],
               ['revision_equipo', 'Datos de revisión de equipo de cómputo', 'revision_id · herramienta_id · codigo_barras · marca · modelo · serie · foto · firmas (base64)'],
               ['app_config', 'Configuración del sistema', 'key (PK) · value — inactivity_minutes · ciudad_revision · nombre/firma_responsable_rh'],
@@ -420,11 +465,153 @@ export default function Documentacion() {
           </p>
         </Section>
 
-        {/* ── 11 ESTADÍSTICAS ── */}
-        <Section num={11} title="Estadísticas Actuales del Sistema">
+        {/* ── 11 SEGURIDAD DE LA INFORMACIÓN ── */}
+        <Section num={11} title="Seguridad de la Información">
+
+          {/* Clasificación */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Clasificación de la información</p>
+            <Table
+              headers={['Nivel', 'Datos', 'Controles aplicados']}
+              rows={[
+                [<Badge color="red">Confidencial</Badge>, 'Nombre completo del empleado · número de empleado · domicilio · foto de licencia · firma digital · foto de unidad', 'Acceso solo con sesión autenticada · transmisión HTTPS · almacenamiento en BD cifrada en tránsito'],
+                [<Badge color="amber">Uso interno</Badge>, 'Configuración del sistema · logs de auditoría (auth_log) · catálogo MAF · historial de revisiones · usuarios del sistema', 'Acceso restringido por rol (admin/auditor) · no expuesto públicamente'],
+                [<Badge color="green">Público</Badge>, 'Verificación de autenticidad de documentos (folio, fecha, auditor, plaza) — sin datos personales sensibles', 'Endpoint público rate-limited · no requiere autenticación · mínima exposición de PII'],
+              ]}
+            />
+          </div>
+
+          {/* Triada CIA */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Principios CIA — Confidencialidad · Integridad · Disponibilidad</p>
+            <div className="grid grid-cols-3 gap-3 text-xs">
+              {[
+                {
+                  letra: 'C', color: 'bg-blue-600', titulo: 'Confidencialidad',
+                  items: [
+                    'JWT en cookie httpOnly (inaccesible desde JS)',
+                    'Contraseñas con bcrypt rounds=12',
+                    'HTTPS/TLS obligatorio en producción (HSTS)',
+                    'Control de acceso por roles (admin/auditor)',
+                    'CORS restringido a dominio autorizado',
+                    'CSP impide carga de recursos externos',
+                  ]
+                },
+                {
+                  letra: 'I', color: 'bg-teal-600', titulo: 'Integridad',
+                  items: [
+                    'Transacciones atómicas en BD (BEGIN/COMMIT/ROLLBACK)',
+                    'SHA-256 embebido en cada carta responsiva',
+                    'Parameterized queries (previene SQL injection)',
+                    'Validación de entrada en todos los endpoints',
+                    'Upsert idempotente en importaciones',
+                    'Firmas digitales en canvas blanco (sin artefactos)',
+                  ]
+                },
+                {
+                  letra: 'A', color: 'bg-green-600', titulo: 'Disponibilidad',
+                  items: [
+                    'Railway managed PostgreSQL con backups automáticos',
+                    'Auto-deploy desde rama master (sin downtime)',
+                    'Migraciones idempotentes al arrancar',
+                    'Health endpoint /api/health para monitoreo',
+                    'Fotos/firmas en BD (no filesystem efímero)',
+                    'Inactividad configurable (no desconecta por error)',
+                  ]
+                },
+              ].map(({ letra, color, titulo, items }) => (
+                <div key={letra} className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className={`${color} text-white px-3 py-2 flex items-center gap-2`}>
+                    <span className="font-black text-lg font-mono">{letra}</span>
+                    <span className="font-semibold text-xs">{titulo}</span>
+                  </div>
+                  <ul className="p-3 space-y-1">
+                    {items.map((item, i) => (
+                      <li key={i} className="text-[10px] text-gray-600 flex gap-1.5">
+                        <span className="text-gray-400 shrink-0 mt-0.5">›</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Marco normativo */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Marco normativo de referencia</p>
+            <Table
+              compact
+              headers={['Marco / Norma', 'Aplicación en SICH']}
+              rows={[
+                ['OWASP Top 10 2021', 'Los 10 riesgos están cubiertos: A01 (RBAC) · A02 (HSTS/bcrypt) · A03 (parameterized queries) · A04 (rate limiting) · A05 (Helmet/CSP/CORS) · A06 (dependencias actualizadas) · A07 (JWT+lockout+inactividad) · A08 (validación de entrada) · A09 (auth_log) · A10 (JWT_SECRET en env var)'],
+                ['NIST SP 800-63B', 'Política de contraseñas: mínimo 8 caracteres · complejidad (mayúscula + número) · hashing con bcrypt factor 12 · sin sugerencias de contraseña al cliente'],
+                ['ISO/IEC 27001:2022', 'Controles aplicados: A.5 (políticas) · A.8 (gestión de activos) · A.9 (control de acceso) · A.10 (criptografía) · A.12 (operaciones seguras) · A.14 (adquisición segura)'],
+                ['CIS Docker Benchmark', 'Contenedor con usuario no-root (USER node) · imagen base oficial node:20-alpine · sin secretos en Dockerfile · dependencias de producción únicamente (--omit=dev)'],
+                ['LFPDPPP (México)', 'Ley Federal de Protección de Datos Personales en Posesión de los Particulares: datos de empleados tratados solo para fines de auditoría interna · acceso restringido a personal autorizado · no se comparten con terceros'],
+              ]}
+            />
+          </div>
+
+          {/* Datos personales */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Datos personales tratados (LFPDPPP)</p>
+            <Table
+              compact
+              headers={['Dato', 'Finalidad', 'Retención']}
+              rows={[
+                ['Nombre completo del empleado', 'Identificación en carta responsiva y registro de auditoría', 'Mientras el empleado esté activo en el catálogo'],
+                ['Número de empleado', 'Identificador único para búsqueda y asignación de herramientas', 'Mientras el empleado esté activo en el catálogo'],
+                ['Domicilio y C.P.', 'Requerido en carta compromiso de vehículo (cláusula legal)', 'Por el tiempo que la revisión esté registrada'],
+                ['Fotografía de licencia de conducir', 'Verificación de vigencia durante la auditoría', 'Por el tiempo que la revisión esté registrada'],
+                ['Firma digital (electrónica)', 'Consentimiento del empleado sobre las condiciones del convenio', 'Permanente — validez legal del documento'],
+                ['Fotografías del vehículo/equipo', 'Evidencia del estado físico de la herramienta auditada', 'Por el tiempo que la revisión esté registrada'],
+              ]}
+            />
+          </div>
+
+          {/* Responsabilidades */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Responsabilidades por rol</p>
+            <Table
+              headers={['Rol', 'Responsabilidades de seguridad']}
+              rows={[
+                [<Badge color="red">Administrador</Badge>, 'Gestionar cuentas de acceso · configurar parámetros del sistema · revisar auth_log ante sospechas de acceso no autorizado · rotar credenciales cuando sea necesario · mantener configurados los parámetros obligatorios (RH, ciudad)'],
+                [<Badge color="blue">Auditor</Badge>, 'No compartir credenciales de acceso · cerrar sesión al finalizar (o configurar inactividad) · capturar información fidedigna · custodiar el dispositivo durante la revisión · reportar anomalías al administrador'],
+                [<Badge color="teal">Responsable RH</Badge>, 'Validar que la firma digital registrada en el sistema sea la propia y esté vigente · notificar al administrador si cambia o si el cargo es asignado a otra persona'],
+              ]}
+            />
+          </div>
+
+          {/* Respuesta a incidentes */}
+          <div>
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Protocolo de respuesta a incidentes de seguridad</p>
+            <div className="space-y-1.5">
+              {[
+                ['01', 'Detección', 'El administrador o auditor detecta comportamiento anómalo: intentos de login fallidos, acceso inusual o datos incorrectos.'],
+                ['02', 'Contención', 'El administrador desactiva la cuenta sospechosa desde Admin → Usuarios y revisa auth_log (IP, user-agent, timestamps).'],
+                ['03', 'Análisis', 'Revisión del historial de revisiones para identificar acciones realizadas por la cuenta comprometida.'],
+                ['04', 'Recuperación', 'Restablecimiento de contraseña con nueva contraseña segura · reactivación de cuenta si procede · notificación al área de TI.'],
+                ['05', 'Documentación', 'Registro del incidente, acciones tomadas y lecciones aprendidas. Actualización de configuración si es necesario.'],
+              ].map(([num, title, desc]) => (
+                <div key={num} className="flex gap-3 text-xs">
+                  <span className="font-mono font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-1 rounded text-center w-8 shrink-0 h-fit">{num}</span>
+                  <div>
+                    <span className="font-semibold text-gray-800">{title} — </span>
+                    <span className="text-gray-600">{desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Section>
+
+        {/* ── 12 ESTADÍSTICAS ── */}
+        <Section num={12} title="Estadísticas Actuales del Sistema">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[1,2,3,4].map(i => (
+              {[1, 2, 3, 4].map(i => (
                 <div key={i} className="border border-gray-200 rounded-lg p-4 animate-pulse">
                   <div className="h-3 bg-gray-200 rounded w-20 mb-3" />
                   <div className="h-7 bg-gray-200 rounded w-12" />
@@ -457,7 +644,7 @@ export default function Documentacion() {
           )}
         </Section>
 
-        {/* PIE DE PÁGINA */}
+        {/* ── PIE DE PÁGINA ── */}
         <div className="border-t-2 border-[#134e4a] pt-4 mt-8 flex items-center justify-between text-[10px] text-gray-400">
           <span>SICH v{info?.version ?? '2.5.0'} · Cadena Comercial OXXO, S.A. de C.V. · Uso interno — Confidencial</span>
           <span>Generado: {today}</span>
@@ -469,6 +656,7 @@ export default function Documentacion() {
           .print-section { page-break-inside: avoid; }
           body { font-size: 11px; }
           @page { margin: 1.5cm; size: A4; }
+          a { color: inherit !important; text-decoration: none !important; }
         }
       `}</style>
     </div>
