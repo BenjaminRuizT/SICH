@@ -106,7 +106,9 @@ function CambiarPasswordModal({ onClose, onSuccess }) {
     e.preventDefault();
     setError('');
     if (form.nueva !== form.confirmar) { setError('Las contraseñas nuevas no coinciden'); return; }
-    if (form.nueva.length < 6) { setError('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+    if (form.nueva.length < 8) { setError('La nueva contraseña debe tener al menos 8 caracteres'); return; }
+    if (!/[A-Z]/.test(form.nueva)) { setError('La nueva contraseña debe incluir al menos una letra mayúscula'); return; }
+    if (!/[0-9]/.test(form.nueva)) { setError('La nueva contraseña debe incluir al menos un número'); return; }
     setLoading(true);
     try {
       await axios.put('/api/usuarios/me/password', { current_password: form.current, new_password: form.nueva });
@@ -152,6 +154,12 @@ function CambiarPasswordModal({ onClose, onSuccess }) {
                 </div>
               </div>
             ))}
+            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 space-y-0.5">
+              <p className="font-semibold text-gray-600">Requisitos de contraseña:</p>
+              <p className={form.nueva.length >= 8 ? 'text-green-600' : ''}>• Mínimo 8 caracteres</p>
+              <p className={/[A-Z]/.test(form.nueva) ? 'text-green-600' : ''}>• Al menos una letra mayúscula</p>
+              <p className={/[0-9]/.test(form.nueva) ? 'text-green-600' : ''}>• Al menos un número</p>
+            </div>
             {error && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{error}</p>}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>

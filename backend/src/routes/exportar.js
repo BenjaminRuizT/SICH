@@ -53,8 +53,26 @@ router.get('/revisiones', requireAdmin, async (req, res) => {
     ];
     ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134e4a' } };
+    // Sanitize text values to prevent Excel formula injection
+    const safe = (v) => {
+      if (typeof v !== 'string') return v;
+      return /^[=+\-@|%]/.test(v) ? `'${v}` : v;
+    };
     rows.forEach(r => {
-      ws.addRow({ ...r,
+      ws.addRow({
+        ...r,
+        auditor_nombre:   safe(r.auditor_nombre),
+        nombre_completo:  safe(r.nombre_completo),
+        posicion:         safe(r.posicion),
+        departamento:     safe(r.departamento),
+        plaza:            safe(r.plaza),
+        placas:           safe(r.placas),
+        no_serie:         safe(r.no_serie),
+        comentarios_auto: safe(r.comentarios_auto),
+        marca_equipo:     safe(r.marca_equipo),
+        modelo_equipo:    safe(r.modelo_equipo),
+        serie_equipo:     safe(r.serie_equipo),
+        observaciones:    safe(r.observaciones),
         tiene_auto: r.tiene_auto ? 'Sí' : 'No',
         tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',
         llanta_refaccion: r.llanta_refaccion == null ? '' : r.llanta_refaccion ? 'Sí' : 'No',
@@ -64,7 +82,7 @@ router.get('/revisiones', requireAdmin, async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="SICHE_Revisiones_${new Date().toISOString().slice(0,10)}.xlsx"`);
     await wb.xlsx.write(res);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 module.exports = router;

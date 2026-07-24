@@ -1,7 +1,16 @@
 try { require('dotenv').config(); } catch {}
+
+// Validate required secrets before starting
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET is missing or too short (minimum 32 characters). Set it in your environment variables.');
+  process.exit(1);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
@@ -49,8 +58,9 @@ app.get('/api/config', requireAuth, async (req, res) => {
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.get('/api/version', (req, res) => res.json({ version: '2.5.0' }));
 
-// Verificación pública de documentos (sin auth)
-app.get('/api/verificar/:id', async (req, res) => {
+// Verificación pública de documentos (sin auth) — rate limited para evitar enumeración
+const verificarLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+app.get('/api/verificar/:id', verificarLimiter, async (req, res) => {
   const pool = require('./db');
   try {
     const { rows: [rev] } = await pool.query(

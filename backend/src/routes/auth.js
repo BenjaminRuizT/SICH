@@ -78,7 +78,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     );
     res.cookie('siche_token', token, COOKIE_OPTS);
     res.json({ id: user.id, username: user.username, nombre: user.nombre, rol: user.rol });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 router.post('/logout', (req, res) => {

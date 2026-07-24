@@ -1,4 +1,4 @@
-# build-trigger: 2026-07-20c
+# build-trigger: 2026-07-24-security
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY frontend/package*.json ./frontend/
@@ -12,5 +12,7 @@ COPY backend/package*.json ./backend/
 RUN cd backend && npm install --omit=dev
 COPY backend ./backend
 COPY --from=build /app/frontend/dist ./frontend/dist
+RUN chown -R node:node /app
+USER node
 EXPOSE 3001
 CMD ["node", "backend/src/server.js"]

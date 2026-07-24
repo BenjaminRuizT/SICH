@@ -8,6 +8,12 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     await client.query('BEGIN');
     const { empleado_id, empleado_snapshot, observaciones, auto, equipo } = req.body;
+    if (observaciones && observaciones.length > 2000)
+      return res.status(400).json({ error: 'Observaciones no puede exceder 2000 caracteres' });
+    if (auto?.comentarios && auto.comentarios.length > 1000)
+      return res.status(400).json({ error: 'Comentarios del auto no puede exceder 1000 caracteres' });
+    if (equipo?.comentarios && equipo.comentarios.length > 1000)
+      return res.status(400).json({ error: 'Comentarios del equipo no puede exceder 1000 caracteres' });
 
     const revRes = await client.query(
       `INSERT INTO revisiones(empleado_id,empleado_snapshot,app_user_id,auditor_nombre,observaciones,tiene_auto,tiene_equipo)
@@ -74,15 +80,17 @@ router.post('/', requireAuth, async (req, res) => {
 // Listar revisiones
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { page = 1, limit = 20, empleado, desde, hasta } = req.query;
-    const offset = (page - 1) * limit;
+    const pageNum = Math.max(1, parseInt(req.query.page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const { empleado, desde, hasta } = req.query;
+    const offset = (pageNum - 1) * limitNum;
     const from = `FROM revisiones r LEFT JOIN empleados e ON r.empleado_id = e.id WHERE 1=1`;
     const filterParams = [];
     let where = '';
     if (empleado) { filterParams.push(`%${empleado}%`); where += ` AND (e.nombre_completo ILIKE $${filterParams.length} OR e.numero_empleado ILIKE $${filterParams.length})`; }
     if (desde) { filterParams.push(desde); where += ` AND r.fecha_revision >= $${filterParams.length}`; }
     if (hasta) { filterParams.push(hasta); where += ` AND r.fecha_revision <= $${filterParams.length}`; }
-    const selectParams = [...filterParams, limit, offset];
+    const selectParams = [...filterParams, limitNum, offset];
     const q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.tiene_auto, r.tiene_equipo, r.status,
               e.nombre_completo, e.numero_empleado, e.plaza
              ${from}${where} ORDER BY r.fecha_revision DESC LIMIT $${filterParams.length + 1} OFFSET $${filterParams.length + 2}`;
