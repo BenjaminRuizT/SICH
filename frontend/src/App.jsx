@@ -13,6 +13,7 @@ import SinValidar from './pages/admin/SinValidar';
 import ResetApp from './pages/admin/ResetApp';
 import HerramientasAdmin from './pages/admin/Herramientas';
 import Configuracion from './pages/admin/Configuracion';
+import Documentacion from './pages/admin/Documentacion';
 import CartaResponsivaAuto from './pages/CartaResponsivaAuto';
 import CartaResponsivaEquipo from './pages/CartaResponsivaEquipo';
 import Verificar from './pages/Verificar';
@@ -44,6 +45,7 @@ function AppRoutes() {
       <Route path="/admin/sin-validar" element={<AuthGuard adminOnly><SinValidar /></AuthGuard>} />
       <Route path="/admin/configuracion" element={<AuthGuard adminOnly><Configuracion /></AuthGuard>} />
       <Route path="/admin/reset" element={<AuthGuard adminOnly><ResetApp /></AuthGuard>} />
+      <Route path="/admin/documentacion" element={<AuthGuard adminOnly><Documentacion /></AuthGuard>} />
       {/* Cartas responsivas — print pages, sin sidebar */}
       <Route path="/carta/auto/:id" element={<AuthGuard noLayout><CartaResponsivaAuto /></AuthGuard>} />
       <Route path="/carta/equipo/:id" element={<AuthGuard noLayout><CartaResponsivaEquipo /></AuthGuard>} />

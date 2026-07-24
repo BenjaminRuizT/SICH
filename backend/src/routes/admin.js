@@ -271,6 +271,41 @@ router.put('/config', requireAdmin, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Información del sistema (sysinfo para documentación técnica)
+// ---------------------------------------------------------------------------
+
+router.get('/sysinfo', requireAdmin, async (req, res) => {
+  try {
+    const [users, revs, herr, emp, cfg] = await Promise.all([
+      pool.query("SELECT COUNT(*) FROM app_users WHERE is_active=true"),
+      pool.query("SELECT COUNT(*), MAX(fecha_revision) AS ultima FROM revisiones"),
+      pool.query("SELECT COUNT(*) FROM herramientas WHERE is_active=true"),
+      pool.query("SELECT COUNT(*) FROM empleados"),
+      pool.query("SELECT key, value FROM app_config"),
+    ]);
+    const config = {};
+    cfg.rows.forEach(r => { config[r.key] = r.value; });
+    res.json({
+      version: '2.5.0',
+      generated_at: new Date().toISOString(),
+      stats: {
+        usuarios_activos: parseInt(users.rows[0].count),
+        revisiones_total: parseInt(revs.rows[0].count),
+        ultima_revision: revs.rows[0].ultima || null,
+        herramientas_activas: parseInt(herr.rows[0].count),
+        empleados: parseInt(emp.rows[0].count),
+      },
+      config: {
+        inactivity_minutes: config.inactivity_minutes || '20',
+        ciudad_revision: config.ciudad_revision || '',
+        rh_configurado: !!(config.nombre_responsable_rh && config.firma_responsable_rh),
+        nombre_rh: config.nombre_responsable_rh || '',
+      },
+    });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// ---------------------------------------------------------------------------
 // Reset de aplicación
 // ---------------------------------------------------------------------------
 
