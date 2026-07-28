@@ -632,12 +632,6 @@ export default function NuevaRevision() {
             onChange={v => setAutoForm(p => ({ ...p, gato_cruceta: v }))} required />
           <Err field="gato_cruceta" />
 
-          {/* Damage panel */}
-          <div className="card">
-            <p className="label mb-3">Panel de daños — Auto</p>
-            <DamagePanel type="auto" value={autoForm.danos} onChange={v => setAutoForm(p => ({ ...p, danos: v }))} />
-          </div>
-
           <div>
             <YesNo label="Tarjeta de circulación" value={autoForm.tarjeta_circulacion}
               onChange={v => setAutoForm(p => ({ ...p, tarjeta_circulacion: v, ...(!v ? { foto_tarjeta_circulacion: null } : {}) }))} required />
@@ -649,6 +643,12 @@ export default function NuevaRevision() {
                   value={autoForm.foto_tarjeta_circulacion} />
               </div>
             )}
+          </div>
+
+          {/* Damage panel */}
+          <div className="card">
+            <p className="label mb-3">Panel de daños — Auto</p>
+            <DamagePanel type="auto" value={autoForm.danos} onChange={v => setAutoForm(p => ({ ...p, danos: v }))} />
           </div>
 
           {/* Photos */}
