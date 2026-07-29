@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const pool = require('../db');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { encrypt, decrypt, encryptArr, decryptArr } = require('../utils/crypto');
 
 // Crear revisión completa (wizard final step)
 router.post('/', requireAuth, async (req, res) => {
@@ -39,15 +40,21 @@ router.post('/', requireAuth, async (req, res) => {
          auto.poliza_seguro != null ? String(auto.poliza_seguro) : null,
          auto.licencia != null ? String(auto.licencia) : null,
          auto.llanta_refaccion,
-         auto.comentarios, JSON.stringify(auto.foto_condiciones || []),
-         auto.foto_licencia || null, auto.foto_tarjeta_circulacion || null,
+         auto.comentarios,
+         JSON.stringify(encryptArr(auto.foto_condiciones || [])),
+         encrypt(auto.foto_licencia) || null,
+         encrypt(auto.foto_tarjeta_circulacion) || null,
          JSON.stringify(auto.danos || []),
-         auto.firma_empleado || null, auto.firma_auditor || null,
-         auto.no_modelo || null, auto.gato_cruceta != null ? Boolean(auto.gato_cruceta) : null,
-         auto.foto_licencia_reverso || null, auto.foto_poliza_seguro || null,
+         encrypt(auto.firma_empleado) || null,
+         encrypt(auto.firma_auditor) || null,
+         auto.no_modelo || null,
+         auto.gato_cruceta != null ? Boolean(auto.gato_cruceta) : null,
+         encrypt(auto.foto_licencia_reverso) || null,
+         encrypt(auto.foto_poliza_seguro) || null,
          auto.domicilio || null, auto.codigo_postal || null,
-         auto.nombre_responsable_rh || null, auto.firma_responsable_rh || null,
-         auto.foto_llanta_refaccion || null,
+         auto.nombre_responsable_rh || null,
+         encrypt(auto.firma_responsable_rh) || null,
+         encrypt(auto.foto_llanta_refaccion) || null,
          auto.tarjeta_circulacion != null ? Boolean(auto.tarjeta_circulacion) : null]
       );
     }
@@ -61,10 +68,13 @@ router.post('/', requireAuth, async (req, res) => {
          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
         [rev.id, equipo.herramienta_id || null, JSON.stringify(equipo.herramienta_snapshot || {}),
          equipo.codigo_barras, equipo.marca, equipo.modelo, equipo.serie,
-         equipo.foto_equipo || null, equipo.comentarios || null,
+         encrypt(equipo.foto_equipo) || null,
+         equipo.comentarios || null,
          JSON.stringify(equipo.danos || []),
-         equipo.firma_empleado || null, equipo.firma_auditor || null,
-         equipo.nombre_responsable_rh || null, equipo.firma_responsable_rh || null]
+         encrypt(equipo.firma_empleado) || null,
+         encrypt(equipo.firma_auditor) || null,
+         equipo.nombre_responsable_rh || null,
+         encrypt(equipo.firma_responsable_rh) || null]
       );
     }
 
@@ -108,9 +118,35 @@ router.get('/:id', requireAuth, async (req, res) => {
        FROM revisiones r LEFT JOIN empleados e ON r.empleado_id=e.id
        WHERE r.id=$1`, [req.params.id]);
     if (!rev.rows[0]) return res.status(404).json({ error: 'No encontrada' });
+
     const autoR = await pool.query('SELECT * FROM revision_auto WHERE revision_id=$1', [req.params.id]);
     const equipoR = await pool.query('SELECT * FROM revision_equipo WHERE revision_id=$1', [req.params.id]);
-    res.json({ ...rev.rows[0], auto: autoR.rows[0] || null, equipo: equipoR.rows[0] || null });
+
+    // Decrypt sensitive fields before sending to client
+    let autoData = autoR.rows[0] || null;
+    if (autoData) {
+      autoData = { ...autoData };
+      autoData.foto_condiciones = decryptArr(autoData.foto_condiciones);
+      autoData.foto_licencia = decrypt(autoData.foto_licencia);
+      autoData.foto_tarjeta_circulacion = decrypt(autoData.foto_tarjeta_circulacion);
+      autoData.foto_poliza_seguro = decrypt(autoData.foto_poliza_seguro);
+      autoData.foto_licencia_reverso = decrypt(autoData.foto_licencia_reverso);
+      autoData.foto_llanta_refaccion = decrypt(autoData.foto_llanta_refaccion);
+      autoData.firma_empleado = decrypt(autoData.firma_empleado);
+      autoData.firma_auditor = decrypt(autoData.firma_auditor);
+      autoData.firma_responsable_rh = decrypt(autoData.firma_responsable_rh);
+    }
+
+    let equipoData = equipoR.rows[0] || null;
+    if (equipoData) {
+      equipoData = { ...equipoData };
+      equipoData.foto_equipo = decrypt(equipoData.foto_equipo);
+      equipoData.firma_empleado = decrypt(equipoData.firma_empleado);
+      equipoData.firma_auditor = decrypt(equipoData.firma_auditor);
+      equipoData.firma_responsable_rh = decrypt(equipoData.firma_responsable_rh);
+    }
+
+    res.json({ ...rev.rows[0], auto: autoData, equipo: equipoData });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 

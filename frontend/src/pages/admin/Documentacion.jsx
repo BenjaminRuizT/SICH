@@ -100,7 +100,7 @@ export default function Documentacion() {
       <div className="print:hidden flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Documentación Técnica</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Generado el {today} · SICH v{info?.version ?? '2.5.0'}</p>
+          <p className="text-xs text-gray-500 mt-0.5">Generado el {today} · SICH v{info?.version ?? '2.6.0'}</p>
         </div>
         <button
           onClick={() => window.print()}
@@ -130,7 +130,7 @@ export default function Documentacion() {
               Documentación<br />Técnica del Sistema
             </h1>
             <p className="text-[11px] font-mono text-gray-500 mt-1">
-              SICH v{info?.version ?? '2.5.0'} · {today}
+              SICH v{info?.version ?? '2.6.0'} · {today}
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function Documentacion() {
               {[
                 ['URL producción', 'control-herramienta.up.railway.app'],
                 ['Infraestructura', 'Railway (cloud PaaS)'],
-                ['Versión actual', info?.version ?? '2.5.0'],
+                ['Versión actual', info?.version ?? '2.6.0'],
                 ['Alcance', '~282 empleados · 437 herramientas registradas'],
               ].map(([k, v]) => (
                 <div key={k} className="flex gap-2">
@@ -211,6 +211,8 @@ export default function Documentacion() {
               ['Infraestructura', 'Railway', 'Producción — auto-deploy desde rama master'],
               ['Generación de Excel', 'ExcelJS', 'v4.4'],
               ['Cookies', 'cookie-parser', 'httpOnly + Secure + SameSite=Strict'],
+              ['PWA / Service Worker', 'vite-plugin-pwa + Workbox', 'v1.3.0 — instalable en móviles, caché offline, auto-update'],
+              ['Cifrado en reposo', 'Node.js crypto (built-in)', 'AES-256-GCM — fotos y firmas cifradas en BD'],
             ]}
           />
         </Section>
@@ -302,6 +304,8 @@ export default function Documentacion() {
               ['Error handling', 'Mensajes genéricos al cliente; detalle interno solo en logs de servidor', <Badge color="teal">OWASP A05:2021</Badge>],
               ['Contenedor no-root', 'Docker: USER node + chown /app — proceso sin privilegios de root', <Badge color="teal">CIS Docker Benchmark</Badge>],
               ['Almacenamiento de media', 'Fotos y firmas en base64 en BD (no filesystem efímero de Railway)', <Badge color="teal">Disponibilidad</Badge>],
+              ['Cifrado fotos y firmas (reposo)', 'AES-256-GCM a nivel aplicación · IV aleatorio de 12 bytes por registro · autenticación GCM · clave ENCRYPTION_KEY (32 bytes) en Railway env · compatible con datos previos sin clave', <Badge color="teal">OWASP A02:2021</Badge>],
+              ['Aplicación instalable (PWA)', 'vite-plugin-pwa genera manifest + service worker · autoUpdate · cache NetworkFirst para API · instalable en Android (Chrome) y iOS (Safari)', <Badge color="teal">Disponibilidad</Badge>],
               ['Integridad de documentos', 'SHA-256 embebido en carta responsiva + endpoint de verificación pública', <Badge color="teal">ISO 27001 A.10</Badge>],
             ]}
           />
@@ -399,8 +403,8 @@ export default function Documentacion() {
               ['empleados', 'Catálogo de empleados OXXO', 'id · numero_empleado (UNIQUE) · nombre_completo · posicion · plaza · region'],
               ['herramientas', 'Catálogo MAF (autos y equipo de cómputo)', 'id · tipo · codigo_barras · no_activo · marca · modelo · serie · plaza · empleado_id'],
               ['revisiones', 'Registro maestro de auditorías', 'id (folio SICH) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo'],
-              ['revision_auto', 'Datos de revisión de vehículo', 'revision_id · herramienta_id · placas · no_serie · kilometraje · firmas (base64) · fotos (base64) · danos (JSONB)'],
-              ['revision_equipo', 'Datos de revisión de equipo de cómputo', 'revision_id · herramienta_id · codigo_barras · marca · modelo · serie · foto · firmas (base64)'],
+              ['revision_auto', 'Datos de revisión de vehículo', 'revision_id · herramienta_id · placas · no_serie · kilometraje · firmas (AES-256-GCM) · fotos (AES-256-GCM) · danos (JSONB)'],
+              ['revision_equipo', 'Datos de revisión de equipo de cómputo', 'revision_id · herramienta_id · codigo_barras · marca · modelo · serie · foto (AES-256-GCM) · firmas (AES-256-GCM)'],
               ['app_config', 'Configuración del sistema', 'key (PK) · value — inactivity_minutes · ciudad_revision · nombre/firma_responsable_rh'],
               ['login_attempts', 'Control de bloqueo por intentos fallidos', 'username (PK) · count · locked_until · updated_at'],
               ['auth_log', 'Auditoría de accesos al sistema', 'id · username · app_user_id · event · ip · user_agent · created_at'],
@@ -457,12 +461,26 @@ export default function Documentacion() {
               ['Tiempo de inactividad', <span className="font-mono">inactivity_minutes</span>, '20', 'Minutos antes de cierre de sesión automático (rango: 1–480)', <Badge color="gray">No</Badge>],
               ['Ciudad de revisión', <span className="font-mono">ciudad_revision</span>, '—', 'Ciudad que aparece en las cartas responsivas. Bloquea nuevas revisiones si no está configurada.', <Badge color="red">Sí</Badge>],
               ['Nombre Responsable RH', <span className="font-mono">nombre_responsable_rh</span>, '—', 'Nombre del Responsable de RH que aparece en las cartas. Bloquea nuevas revisiones si no está configurado.', <Badge color="red">Sí</Badge>],
-              ['Firma Responsable RH', <span className="font-mono">firma_responsable_rh</span>, '—', 'Firma digital del RH (base64 JPEG). Se inyecta automáticamente en todas las cartas. Bloquea nuevas revisiones si no está configurada.', <Badge color="red">Sí</Badge>],
+              ['Firma Responsable RH', <span className="font-mono">firma_responsable_rh</span>, '—', 'Firma digital del RH (base64 JPEG). Se inyecta automáticamente en todas las cartas. Bloquea nuevas revisiones si no está configurada. Almacenada cifrada (AES-256-GCM) si ENCRYPTION_KEY está configurada.', <Badge color="red">Sí</Badge>],
             ]}
           />
           <p className="text-[10px] text-gray-500 mt-2">
             * Los tres parámetros marcados como requeridos son validados en el módulo de Nueva Revisión. El sistema muestra una pantalla de bloqueo con enlace a Configuración si alguno falta.
           </p>
+          <div className="mt-4">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Variables de entorno requeridas (Railway)</p>
+            <Table
+              compact
+              headers={['Variable', 'Tipo', 'Descripción']}
+              rows={[
+                [<span className="font-mono">DATABASE_URL</span>, <Badge color="red">Requerida</Badge>, 'Cadena de conexión a PostgreSQL (Railway la provee automáticamente)'],
+                [<span className="font-mono">JWT_SECRET</span>, <Badge color="red">Requerida</Badge>, 'Secreto HS256 mín. 32 chars. El servidor no arranca si falta o es corto.'],
+                [<span className="font-mono">NODE_ENV</span>, <Badge color="red">Requerida</Badge>, 'Debe ser "production" para habilitar HTTPS, HSTS, migraciones automáticas y servir el SPA.'],
+                [<span className="font-mono">FRONTEND_URL</span>, <Badge color="red">Requerida</Badge>, 'Origen autorizado en CORS. Ej: https://control-herramienta.up.railway.app'],
+                [<span className="font-mono">ENCRYPTION_KEY</span>, <Badge color="amber">Recomendada</Badge>, '64 caracteres hexadecimales (32 bytes). Habilita AES-256-GCM para fotos y firmas. Sin esta variable los datos se almacenan sin cifrar (degradación controlada).'],
+              ]}
+            />
+          </div>
         </Section>
 
         {/* ── 11 SEGURIDAD DE LA INFORMACIÓN ── */}
@@ -495,6 +513,7 @@ export default function Documentacion() {
                     'Control de acceso por roles (admin/auditor)',
                     'CORS restringido a dominio autorizado',
                     'CSP impide carga de recursos externos',
+                    'AES-256-GCM: fotos y firmas cifradas en BD (reposo)',
                   ]
                 },
                 {
@@ -517,6 +536,7 @@ export default function Documentacion() {
                     'Health endpoint /api/health para monitoreo',
                     'Fotos/firmas en BD (no filesystem efímero)',
                     'Inactividad configurable (no desconecta por error)',
+                    'PWA con caché offline (Workbox NetworkFirst)',
                   ]
                 },
               ].map(({ letra, color, titulo, items }) => (
@@ -646,7 +666,7 @@ export default function Documentacion() {
 
         {/* ── PIE DE PÁGINA ── */}
         <div className="border-t-2 border-[#134e4a] pt-4 mt-8 flex items-center justify-between text-[10px] text-gray-400">
-          <span>SICH v{info?.version ?? '2.5.0'} · Cadena Comercial OXXO, S.A. de C.V. · Uso interno — Confidencial</span>
+          <span>SICH v{info?.version ?? '2.6.0'} · Cadena Comercial OXXO, S.A. de C.V. · Uso interno — Confidencial</span>
           <span>Generado: {today}</span>
         </div>
       </div>

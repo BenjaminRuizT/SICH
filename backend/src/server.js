@@ -6,6 +6,10 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
   console.error('FATAL: JWT_SECRET is missing or too short (minimum 32 characters). Set it in your environment variables.');
   process.exit(1);
 }
+const ENC_KEY = process.env.ENCRYPTION_KEY;
+if (!ENC_KEY || ENC_KEY.length !== 64) {
+  console.warn('WARN: ENCRYPTION_KEY not set or invalid (must be 64 hex chars = 32 bytes). Photos and signatures will be stored unencrypted.');
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -15,6 +19,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 
 const { requireAuth } = require('./middleware/auth');
+const { decrypt } = require('./utils/crypto');
 
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
@@ -50,13 +55,18 @@ app.get('/api/config', requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT key,value FROM app_config');
     const config = {};
-    rows.forEach(r => { try { config[r.key] = JSON.parse(r.value); } catch { config[r.key] = r.value; } });
+    rows.forEach(r => {
+      let val;
+      try { val = JSON.parse(r.value); } catch { val = r.value; }
+      if (r.key === 'firma_responsable_rh') val = decrypt(String(val || '')) || val;
+      config[r.key] = val;
+    });
     res.json(config);
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('/api/version', (req, res) => res.json({ version: '2.5.0' }));
+app.get('/api/version', (req, res) => res.json({ version: '2.6.0' }));
 
 // Verificación pública de documentos (sin auth) — rate limited para evitar enumeración
 const verificarLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });

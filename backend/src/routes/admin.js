@@ -2,6 +2,7 @@ const router = require('express').Router();
 const pool = require('../db');
 const { requireAdmin, requireAuth } = require('../middleware/auth');
 const ExcelJS = require('exceljs');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 // ---------------------------------------------------------------------------
 // Templates descargables
@@ -238,9 +239,11 @@ router.get('/config', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT key, value FROM app_config');
     const cfg = {};
-    rows.forEach(r => { cfg[r.key] = r.value; });
+    rows.forEach(r => {
+      cfg[r.key] = r.key === 'firma_responsable_rh' ? decrypt(r.value) : r.value;
+    });
     res.json(cfg);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 router.put('/config', requireAdmin, async (req, res) => {
@@ -259,6 +262,9 @@ router.put('/config', requireAdmin, async (req, res) => {
         storedValue = String(parsed);
       } else {
         storedValue = String(value ?? '');
+        if (key === 'firma_responsable_rh' && storedValue) {
+          storedValue = encrypt(storedValue);
+        }
       }
       await pool.query(
         `INSERT INTO app_config(key, value) VALUES($1, $2)
@@ -267,7 +273,7 @@ router.put('/config', requireAdmin, async (req, res) => {
       );
     }
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 // ---------------------------------------------------------------------------
