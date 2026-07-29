@@ -221,9 +221,10 @@ export default function Documentacion() {
         <Section num={3} title="Arquitectura del Sistema">
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 font-mono text-[11px] leading-relaxed text-gray-700 mb-4 overflow-x-auto whitespace-pre">
 {`┌─────────────────────────────────────────────────────────────────────┐
-│                         CLIENTE (Browser)                           │
-│              React 18 + Vite + Tailwind CSS (SPA)                   │
-│         JWT almacenado en cookie httpOnly (no localStorage)         │
+│                         CLIENTE (Browser / PWA)                     │
+│              React 18 + Vite + Tailwind CSS (SPA + PWA)            │
+│  JWT en cookie httpOnly · Cartas responsivas generadas al vuelo     │
+│  El PDF solo existe en el navegador (window.print) — no se guarda  │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │  HTTPS / TLS (forzado en producción)
                            ▼
@@ -243,13 +244,17 @@ export default function Documentacion() {
 │  │  /api/auth   /api/revisiones  /api/empleados  /api/admin   │   │
 │  │  /api/herramientas  /api/exportar  /api/config  /api/...   │   │
 │  └──────────────────────────┬────────────────────────────────┘   │
+│      Al escribir ──► encrypt(AES-256-GCM)   decrypt ◄── Al leer  │
+│      fotos/firmas cifradas con ENCRYPTION_KEY (Railway env var)   │
 │                             │  Parameterized queries (no ORM)     │
 └─────────────────────────────┼───────────────────────────────────────┘
                               │  pg + SSL
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │              PostgreSQL 16  (Railway managed)                        │
-│   9 tablas · 6 migraciones · Fotos/firmas base64 en BD             │
+│  9 tablas · 7 migraciones                                           │
+│  Fotos y firmas almacenadas cifradas (AES-256-GCM) — ilegibles      │
+│  sin la ENCRYPTION_KEY aunque se acceda directamente al dump de BD  │
 └─────────────────────────────────────────────────────────────────────┘`}
           </div>
         </Section>
@@ -271,7 +276,7 @@ export default function Documentacion() {
               ['Herramientas', 'Catálogo MAF con historial de revisiones por activo', <Badge color="amber">Admin</Badge>],
               ['Importar Datos', 'Carga masiva de empleados y herramientas desde Excel o JSON', <Badge color="amber">Admin</Badge>],
               ['Exportar', 'Reporte Excel de revisiones con filtro por fecha', <Badge color="amber">Admin</Badge>],
-              ['Configuración', 'Parámetros del sistema: RH, ciudad, inactividad', <Badge color="amber">Admin</Badge>],
+              ['Configuración', 'Parámetros del sistema: RH (nombre + firma + modo opcional + pendientes de firma), ciudad, inactividad', <Badge color="amber">Admin</Badge>],
               ['Reset', 'Limpieza controlada de datos con opciones granulares', <Badge color="amber">Admin</Badge>],
               ['Documentación', 'Visualización y exportación de este documento técnico', <Badge color="amber">Admin</Badge>],
             ]}
@@ -390,6 +395,9 @@ export default function Documentacion() {
               [<Badge color="red">DELETE</Badge>, '/api/admin/usuarios/:id', <Badge color="amber">Admin</Badge>, 'Eliminar usuario (protege último admin)'],
               [<Badge color="blue">GET</Badge>, '/api/admin/template/:tipo', <Badge color="amber">Admin</Badge>, 'Descargar plantilla Excel (empleados|herramientas)'],
               [<Badge color="green">POST</Badge>, '/api/admin/import-excel/:tipo', <Badge color="amber">Admin</Badge>, 'Importar desde Excel (upsert idempotente)'],
+              [<Badge color="red">DELETE</Badge>, '/api/admin/config/rh', <Badge color="amber">Admin</Badge>, 'Eliminar nombre y firma del Responsable de RH de app_config'],
+              [<Badge color="blue">GET</Badge>, '/api/admin/pendientes-firma-rh', <Badge color="amber">Admin</Badge>, 'Listar revisiones con firma_rh_pendiente=true (cartas sin firma RH)'],
+              [<Badge color="green">POST</Badge>, '/api/admin/aplicar-firma-rh', <Badge color="amber">Admin</Badge>, 'Aplicar firma RH actual a todos los documentos pendientes (actualiza revision_auto + revision_equipo)'],
             ]}
           />
         </Section>
@@ -402,10 +410,10 @@ export default function Documentacion() {
               ['app_users', 'Cuentas de acceso al sistema', 'id · username · password_hash · rol · is_active · last_login'],
               ['empleados', 'Catálogo de empleados OXXO', 'id · numero_empleado (UNIQUE) · nombre_completo · posicion · plaza · region'],
               ['herramientas', 'Catálogo MAF (autos y equipo de cómputo)', 'id · tipo · codigo_barras · no_activo · marca · modelo · serie · plaza · empleado_id'],
-              ['revisiones', 'Registro maestro de auditorías', 'id (folio SICH) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo'],
+              ['revisiones', 'Registro maestro de auditorías', 'id (folio SICH) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo · firma_rh_pendiente'],
               ['revision_auto', 'Datos de revisión de vehículo', 'revision_id · herramienta_id · placas · no_serie · kilometraje · firmas (AES-256-GCM) · fotos (AES-256-GCM) · danos (JSONB)'],
               ['revision_equipo', 'Datos de revisión de equipo de cómputo', 'revision_id · herramienta_id · codigo_barras · marca · modelo · serie · foto (AES-256-GCM) · firmas (AES-256-GCM)'],
-              ['app_config', 'Configuración del sistema', 'key (PK) · value — inactivity_minutes · ciudad_revision · nombre/firma_responsable_rh'],
+              ['app_config', 'Configuración del sistema', 'key (PK) · value — inactivity_minutes · ciudad_revision · nombre_responsable_rh · firma_responsable_rh (AES-256-GCM) · firma_rh_opcional'],
               ['login_attempts', 'Control de bloqueo por intentos fallidos', 'username (PK) · count · locked_until · updated_at'],
               ['auth_log', 'Auditoría de accesos al sistema', 'id · username · app_user_id · event · ip · user_agent · created_at'],
             ]}
@@ -422,6 +430,7 @@ export default function Documentacion() {
                 ['004_auto_extras.sql', 'Campos adicionales de vehículo: gato_cruceta, foto_licencia_reverso, foto_poliza_seguro, domicilio, cp'],
                 ['005_config_lockout.sql', 'Tablas login_attempts y app_config · default inactivity_minutes=20'],
                 ['006_placas.sql', 'Campo foto_poliza_seguro + precarga de placas desde catálogo SIGE (181 autos)'],
+                ['007_firma_rh_pendiente.sql', 'Columna firma_rh_pendiente en revisiones + clave firma_rh_opcional en app_config'],
               ]}
             />
           </div>
@@ -436,11 +445,12 @@ export default function Documentacion() {
               ['03', 'Selección de herramienta', 'El auditor selecciona la herramienta a revisar mediante código de barras o búsqueda en catálogo MAF.'],
               ['04', 'Captura física del vehículo', 'Registro de placas, no. serie, kilometraje, estado general, licencia, llanta refacción, póliza de seguro. Captura de fotos.'],
               ['05', 'Registro de daños', 'Panel interactivo de daños con etiquetas descriptivas y campo de observaciones.'],
-              ['06', 'Firmas digitales', 'Captura de firma del empleado y firma del auditor en canvas táctil. La firma del Responsable de RH se inyecta automáticamente desde configuración.'],
+              ['06', 'Firmas digitales', 'Captura de firma del empleado y firma del auditor en canvas táctil. La firma del Responsable de RH se inyecta automáticamente si está configurada. Si el modo "firma opcional" está activo, la auditoría puede completarse sin ella; el documento quedará marcado como pendiente de firma RH.'],
               ['07', 'Resumen y confirmación', 'Vista previa completa de todos los datos antes de guardar. El auditor puede regresar a cualquier paso.'],
-              ['08', 'Registro en base de datos', 'Transacción atómica: INSERT en revisiones + revision_auto / revision_equipo. Asignación de folio SICH-XXXXXX.'],
-              ['09', 'Generación de carta responsiva', 'Documento PDF de 2 páginas con firmas digitales integradas, datos de la unidad, folio SICH y hash SHA-256.'],
+              ['08', 'Registro en base de datos', 'Transacción atómica: INSERT en revisiones (con firma_rh_pendiente=true si falta firma RH) + revision_auto / revision_equipo. Fotos y firmas se cifran con AES-256-GCM antes de persistir. Asignación de folio SICH-XXXXXX.'],
+              ['09', 'Generación de carta responsiva', 'La carta NO se almacena como archivo en ningún servidor. Cada vez que se consulta, el API retorna los datos de la revisión (descifrados en ese momento), React renderiza el HTML al vuelo y el usuario puede imprimirla o exportarla como PDF con window.print(). El PDF solo existe en el navegador mientras está abierto.'],
               ['10', 'Verificación de autenticidad', 'Endpoint público /verificar/:id permite validar la autenticidad e integridad del documento mediante el folio o QR.'],
+              ['11', 'Completar firma RH pendiente', 'El administrador configura la firma del Responsable de RH y, desde Configuración → "Documentos pendientes de firma RH", aplica la firma a todos los documentos pendientes en una sola acción. El sistema actualiza revision_auto y revision_equipo, y las cartas responsivas quedan completas al siguiente acceso.'],
             ].map(([num, title, desc]) => (
               <div key={num} className="flex gap-3 text-xs">
                 <span className="font-mono font-bold text-[#134e4a] bg-teal-50 border border-teal-200 px-2 py-1 rounded text-center w-8 shrink-0 h-fit">{num}</span>
@@ -461,11 +471,12 @@ export default function Documentacion() {
               ['Tiempo de inactividad', <span className="font-mono">inactivity_minutes</span>, '20', 'Minutos antes de cierre de sesión automático (rango: 1–480)', <Badge color="gray">No</Badge>],
               ['Ciudad de revisión', <span className="font-mono">ciudad_revision</span>, '—', 'Ciudad que aparece en las cartas responsivas. Bloquea nuevas revisiones si no está configurada.', <Badge color="red">Sí</Badge>],
               ['Nombre Responsable RH', <span className="font-mono">nombre_responsable_rh</span>, '—', 'Nombre del Responsable de RH que aparece en las cartas. Bloquea nuevas revisiones si no está configurado.', <Badge color="red">Sí</Badge>],
-              ['Firma Responsable RH', <span className="font-mono">firma_responsable_rh</span>, '—', 'Firma digital del RH (base64 JPEG). Se inyecta automáticamente en todas las cartas. Bloquea nuevas revisiones si no está configurada. Almacenada cifrada (AES-256-GCM) si ENCRYPTION_KEY está configurada.', <Badge color="red">Sí</Badge>],
+              ['Firma Responsable RH', <span className="font-mono">firma_responsable_rh</span>, '—', 'Firma digital del RH (base64 JPEG). Se inyecta automáticamente en todas las cartas. Almacenada cifrada (AES-256-GCM). Bloquea nuevas revisiones si no está configurada y firma_rh_opcional=false.', <Badge color="red">Cond.</Badge>],
+              ['Modo firma RH opcional', <span className="font-mono">firma_rh_opcional</span>, 'false', 'Si es "true", permite registrar auditorías sin firma RH. Los documentos generados sin firma quedan marcados como pendientes (firma_rh_pendiente=true) y pueden completarse después desde Configuración.', <Badge color="gray">No</Badge>],
             ]}
           />
           <p className="text-[10px] text-gray-500 mt-2">
-            * Los tres parámetros marcados como requeridos son validados en el módulo de Nueva Revisión. El sistema muestra una pantalla de bloqueo con enlace a Configuración si alguno falta.
+            * ciudad_revision, nombre_responsable_rh y firma_responsable_rh bloquean nuevas revisiones si faltan, a menos que firma_rh_opcional esté activo (en ese caso solo ciudad_revision es obligatoria).
           </p>
           <div className="mt-4">
             <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Variables de entorno requeridas (Railway)</p>
@@ -485,6 +496,32 @@ export default function Documentacion() {
 
         {/* ── 11 SEGURIDAD DE LA INFORMACIÓN ── */}
         <Section num={11} title="Seguridad de la Información">
+
+          {/* Modelo de documentos */}
+          <div className="mb-5">
+            <p className="text-[11px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">Modelo de almacenamiento y generación de documentos</p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-900 space-y-3 mb-3">
+              <p className="font-semibold text-blue-800">¿Las cartas responsivas se guardan como archivos en el servidor?</p>
+              <p><strong>No.</strong> Las cartas responsivas (auto y equipo) <strong>no se almacenan como archivos PDF ni HTML en ningún servidor</strong>. Cada vez que un usuario abre una carta, ocurre el siguiente proceso en tiempo real:</p>
+              <ol className="list-decimal pl-4 space-y-1">
+                <li>El navegador solicita los datos al API (<span className="font-mono bg-blue-100 px-1 rounded">GET /api/revisiones/:id</span>).</li>
+                <li>El backend descifra las fotos y firmas (AES-256-GCM) y devuelve los datos en JSON.</li>
+                <li>React renderiza el documento HTML al vuelo en el navegador.</li>
+                <li>El usuario puede imprimir o exportar como PDF con <span className="font-mono bg-blue-100 px-1 rounded">window.print()</span>.</li>
+                <li><strong>El PDF solo existe mientras está abierto en el navegador</strong> — no se sube ni persiste en ningún servidor.</li>
+              </ol>
+            </div>
+            <Table
+              compact
+              headers={['Capa', '¿Qué se guarda?', '¿Cómo está protegido?']}
+              rows={[
+                ['PostgreSQL (reposo)', 'Fotos (licencia, vehículo, póliza, llanta) y firmas (empleado, auditor, RH) como base64 TEXT cifrado. Resto de campos en texto plano.', 'AES-256-GCM · IV aleatorio de 12 bytes por campo · autenticación GCM · clave ENCRYPTION_KEY externa a la BD · ilegible sin la clave aunque se obtenga el dump completo'],
+                ['Tránsito (red)', 'JSON con datos de revisión (incluyendo fotos/firmas ya descifradas) entre servidor y navegador.', 'HTTPS/TLS forzado en producción (HSTS) · cookie JWT httpOnly + SameSite=Strict'],
+                ['Navegador (cliente)', 'Datos en memoria de React mientras la pestaña está abierta. PDF generado localmente si el usuario lo exporta.', 'CSP impide scripts externos · cookie httpOnly inaccesible desde JS · sin localStorage para datos sensibles'],
+                ['Servidor de archivos', 'No existe — Railway tiene filesystem efímero. No se escribe ningún PDF o imagen en disco.', 'N/A — no hay archivos que proteger en el servidor'],
+              ]}
+            />
+          </div>
 
           {/* Clasificación */}
           <div className="mb-5">
@@ -534,7 +571,8 @@ export default function Documentacion() {
                     'Auto-deploy desde rama master (sin downtime)',
                     'Migraciones idempotentes al arrancar',
                     'Health endpoint /api/health para monitoreo',
-                    'Fotos/firmas en BD (no filesystem efímero)',
+                    'Fotos/firmas en BD (no filesystem efímero de Railway)',
+                    'Cartas generadas al vuelo — sin dependencia de archivos físicos',
                     'Inactividad configurable (no desconecta por error)',
                     'PWA con caché offline (Workbox NetworkFirst)',
                   ]
