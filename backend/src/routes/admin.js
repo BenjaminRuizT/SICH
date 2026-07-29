@@ -206,7 +206,7 @@ router.get('/herramientas/:id', requireAdmin, async (req, res) => {
 // Herramientas sin revisión
 // ---------------------------------------------------------------------------
 
-router.get('/sin-validar', requireAdmin, async (req, res) => {
+router.get('/sin-validar', requireAuth, async (req, res) => {
   try {
     const { tipo, plaza } = req.query;
     let q = `
@@ -227,7 +227,7 @@ router.get('/sin-validar', requireAdmin, async (req, res) => {
     q += ' ORDER BY h.tipo, h.plaza, e.nombre_completo NULLS LAST';
     const { rows } = await pool.query(q, params);
     res.json(rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 // ---------------------------------------------------------------------------
