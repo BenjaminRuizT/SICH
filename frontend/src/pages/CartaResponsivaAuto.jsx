@@ -208,7 +208,9 @@ export default function CartaResponsivaAuto() {
               <div className="text-center">
                 {auto.firma_responsable_rh
                   ? <img src={auto.firma_responsable_rh} alt="Firma responsable RH" className="h-20 mx-auto border-b border-gray-400 mb-1 max-w-full" />
-                  : <div className="h-20 border-b border-gray-400 mb-1" />
+                  : <div className="h-20 border-b border-gray-400 mb-1 flex items-center justify-center">
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-400 px-2 py-1 rounded bg-amber-50">Firma pendiente</span>
+                    </div>
                 }
                 <p className="text-[11px] font-semibold">{auto.nombre_responsable_rh || nombreAuditor}</p>
                 <p className="text-[10px] text-gray-500">RH de la Unidad de Negocio</p>

@@ -127,7 +127,9 @@ export default function CartaResponsivaEquipo() {
               <p className="text-sm font-bold mb-8">ENTREGA</p>
               {eq.firma_responsable_rh
                 ? <img src={eq.firma_responsable_rh} alt="Firma RH" className="h-20 mx-auto border-b-2 border-gray-800 mb-1 max-w-full object-contain" />
-                : <div className="h-20 border-b-2 border-gray-800 mb-1" />
+                : <div className="h-20 border-b-2 border-gray-800 mb-1 flex items-center justify-center">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 border border-amber-400 px-2 py-1 rounded bg-amber-50">Firma pendiente</span>
+                  </div>
               }
               <p className="text-sm font-bold">RESPONSABLE DE RH</p>
               {nombreRH && <p className="text-xs text-gray-600 mt-0.5">{nombreRH}</p>}

@@ -249,7 +249,7 @@ router.get('/config', requireAdmin, async (req, res) => {
 router.put('/config', requireAdmin, async (req, res) => {
   try {
     const numericKeys = ['inactivity_minutes'];
-    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh', 'ciudad_revision'];
+    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh', 'ciudad_revision', 'firma_rh_opcional'];
     const allowed = [...numericKeys, ...stringKeys];
     const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
 
@@ -274,6 +274,84 @@ router.put('/config', requireAdmin, async (req, res) => {
     }
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// Borrar datos del Responsable de RH
+router.delete('/config/rh', requireAdmin, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM app_config WHERE key IN ('nombre_responsable_rh', 'firma_responsable_rh')`);
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// Revisiones pendientes de firma RH
+router.get('/pendientes-firma-rh', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT r.id, r.fecha_revision, r.auditor_nombre, r.tiene_auto, r.tiene_equipo,
+             e.nombre_completo, e.numero_empleado, e.plaza
+      FROM revisiones r
+      LEFT JOIN empleados e ON r.empleado_id = e.id
+      WHERE r.firma_rh_pendiente = true
+      ORDER BY r.fecha_revision DESC
+    `);
+    res.json(rows);
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// Aplicar firma RH actual a todos los documentos pendientes
+router.post('/aplicar-firma-rh', requireAdmin, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    // Obtener firma y nombre actuales
+    const { rows: cfgRows } = await client.query(
+      `SELECT key, value FROM app_config WHERE key IN ('firma_responsable_rh', 'nombre_responsable_rh')`
+    );
+    const cfg = {};
+    cfgRows.forEach(r => { cfg[r.key] = r.value; });
+
+    const firmaEnc = cfg.firma_responsable_rh || null;
+    const nombre = cfg.nombre_responsable_rh || null;
+
+    if (!firmaEnc || !nombre)
+      return res.status(400).json({ error: 'Configura el nombre y firma del Responsable de RH antes de aplicar.' });
+
+    // IDs de revisiones pendientes
+    const { rows: pendientes } = await client.query(
+      `SELECT id, tiene_auto, tiene_equipo FROM revisiones WHERE firma_rh_pendiente = true`
+    );
+    if (!pendientes.length) return res.json({ ok: true, actualizados: 0 });
+
+    const ids = pendientes.map(r => r.id);
+
+    await client.query('BEGIN');
+
+    // Actualizar revision_auto
+    await client.query(
+      `UPDATE revision_auto SET firma_responsable_rh=$1, nombre_responsable_rh=$2
+       WHERE revision_id = ANY($3::int[])`,
+      [firmaEnc, nombre, ids]
+    );
+
+    // Actualizar revision_equipo
+    await client.query(
+      `UPDATE revision_equipo SET firma_responsable_rh=$1, nombre_responsable_rh=$2
+       WHERE revision_id = ANY($3::int[])`,
+      [firmaEnc, nombre, ids]
+    );
+
+    // Marcar como completadas
+    await client.query(
+      `UPDATE revisiones SET firma_rh_pendiente=false WHERE id = ANY($1::int[])`,
+      [ids]
+    );
+
+    await client.query('COMMIT');
+    res.json({ ok: true, actualizados: ids.length });
+  } catch {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally { client.release(); }
 });
 
 // ---------------------------------------------------------------------------

@@ -16,11 +16,13 @@ router.post('/', requireAuth, async (req, res) => {
     if (equipo?.comentarios && equipo.comentarios.length > 1000)
       return res.status(400).json({ error: 'Comentarios del equipo no puede exceder 1000 caracteres' });
 
+    const firmaRhPresente = !!(auto?.firma_responsable_rh || equipo?.firma_responsable_rh);
+
     const revRes = await client.query(
-      `INSERT INTO revisiones(empleado_id,empleado_snapshot,app_user_id,auditor_nombre,observaciones,tiene_auto,tiene_equipo)
-       VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      `INSERT INTO revisiones(empleado_id,empleado_snapshot,app_user_id,auditor_nombre,observaciones,tiene_auto,tiene_equipo,firma_rh_pendiente)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
       [empleado_id, JSON.stringify(empleado_snapshot), req.user.id, req.user.nombre,
-       observaciones, !!auto, !!equipo]
+       observaciones, !!auto, !!equipo, !firmaRhPresente]
     );
     const rev = revRes.rows[0];
 

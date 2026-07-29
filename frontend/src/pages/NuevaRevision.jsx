@@ -165,7 +165,7 @@ export default function NuevaRevision() {
   const [sending, setSending] = useState(false);
   const [savedId, setSavedId] = useState(null);
   const [config, setConfig] = useState({});
-  const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null, ciudad: '' });
+  const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null, ciudad: '', firmaOpcional: false });
   const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
   const [confirmReset, setConfirmReset] = useState(false);
   const isInitialMount = useRef(true);
@@ -176,7 +176,8 @@ export default function NuevaRevision() {
       const nombre = r.data.nombre_responsable_rh || '';
       const firma = r.data.firma_responsable_rh || null;
       const ciudad = r.data.ciudad_revision || '';
-      setRhConfig({ nombre, firma, ciudad });
+      const firmaOpcional = r.data.firma_rh_opcional === 'true' || r.data.firma_rh_opcional === true;
+      setRhConfig({ nombre, firma, ciudad, firmaOpcional });
       setAutoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
       setEquipoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
     }).catch(() => {});
@@ -347,7 +348,9 @@ export default function NuevaRevision() {
 
   const Err = ({ field }) => errors[field] ? <p className="text-red-500 text-xs mt-1">{errors[field]}</p> : null;
 
-  if (!rhConfig.nombre || !rhConfig.firma || !rhConfig.ciudad) {
+  const firmaRhFaltante = !rhConfig.nombre || !rhConfig.firma;
+  // Bloquear si falta ciudad, o si falta firma RH y no está en modo opcional
+  if (!rhConfig.ciudad || (!rhConfig.firmaOpcional && firmaRhFaltante)) {
     const faltantes = [
       !rhConfig.nombre && 'nombre del Responsable de RH',
       !rhConfig.firma  && 'firma del Responsable de RH',
@@ -676,9 +679,14 @@ export default function NuevaRevision() {
             <Err field="firma_auditor" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-            ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
-          </div>
+          {rhConfig.firma
+            ? <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
+              </div>
+            : <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                ⚠ Firma RH pendiente — la carta responsiva quedará sin firma hasta que se configure y aplique desde Administración.
+              </div>
+          }
 
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
@@ -760,9 +768,14 @@ export default function NuevaRevision() {
             <Err field="firma_auditor" />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
-            ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
-          </div>
+          {rhConfig.firma
+            ? <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                ✓ Responsable RH: <strong>{rhConfig.nombre}</strong>
+              </div>
+            : <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                ⚠ Firma RH pendiente — la carta responsiva quedará sin firma hasta que se configure y aplique desde Administración.
+              </div>
+          }
 
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
