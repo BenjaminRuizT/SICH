@@ -49,6 +49,7 @@ app.use('/api/revisiones', require('./routes/revisiones'));
 app.use('/api/usuarios', require('./routes/appUsers'));
 app.use('/api/exportar', require('./routes/exportar'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/responsivas', require('./routes/responsivas'));
 
 app.get('/api/config', requireAuth, async (req, res) => {
   const pool = require('./db');
@@ -66,7 +67,7 @@ app.get('/api/config', requireAuth, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('/api/version', (req, res) => res.json({ version: '2.7.0' }));
+app.get('/api/version', (req, res) => res.json({ version: '2.8.0' }));
 
 // Verificación pública de documentos (sin auth) — rate limited para evitar enumeración
 const verificarLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });

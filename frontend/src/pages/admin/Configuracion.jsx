@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../../context/AuthContext';
 import SignatureCanvas from '../../components/SignatureCanvas';
 import { fixSignatureBg } from '../../utils/signatureUtils';
 
@@ -32,6 +33,9 @@ export default function Configuracion() {
   const [confirmDeleteRH, setConfirmDeleteRH] = useState(false);
   const [deletingRH, setDeletingRH] = useState(false);
 
+  const [exportRoles, setExportRoles] = useState('admin');
+  const [exportRolesSaving, setExportRolesSaving] = useState(false);
+
   const loadPendientes = () => {
     setPendientesLoading(true);
     axios.get('/api/admin/pendientes-firma-rh')
@@ -59,6 +63,9 @@ export default function Configuracion() {
       .catch(() => setMinutes('20'))
       .finally(() => setLoading(false));
     loadPendientes();
+    api.get('/admin/exportar-responsivas-roles').then(r => {
+      setExportRoles(r.data.roles || 'admin');
+    }).catch(() => {});
   }, []);
 
   const save = async (e) => {
@@ -127,6 +134,15 @@ export default function Configuracion() {
     } catch {
       setRhMsg({ type: 'error', text: 'Error al eliminar.' });
     } finally { setDeletingRH(false); }
+  };
+
+  const saveExportRoles = async (val) => {
+    setExportRolesSaving(true);
+    try {
+      await axios.put('/api/admin/config', { exportar_responsivas_roles: val });
+      setExportRoles(val);
+    } catch {}
+    finally { setExportRolesSaving(false); }
   };
 
   const aplicarFirma = async () => {
@@ -366,6 +382,39 @@ export default function Configuracion() {
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
+      </div>
+
+      {/* Acceso a exportar responsivas */}
+      <div className="card space-y-3">
+        <h2 className="font-semibold text-gray-700">Exportar responsivas (ZIP)</h2>
+        <p className="text-sm text-gray-500">
+          Define quien puede ver los botones para descargar todas las responsivas en formato ZIP desde el Historial.
+        </p>
+        <div className="space-y-2">
+          {[
+            { value: 'admin', label: 'Solo administradores' },
+            { value: 'admin,auditor', label: 'Administradores y auditores' },
+          ].map(opt => (
+            <label key={opt.value}
+              className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-gray-50"
+              style={{ borderColor: exportRoles === opt.value ? '#134e4a' : '#e5e7eb' }}>
+              <input
+                type="radio"
+                name="exportRoles"
+                value={opt.value}
+                checked={exportRoles === opt.value}
+                disabled={exportRolesSaving}
+                onChange={() => saveExportRoles(opt.value)}
+                className="accent-brand-700"
+              />
+              <div>
+                <p className="font-medium text-sm text-gray-800">{opt.label}</p>
+              </div>
+              {exportRoles === opt.value && <span className="ml-auto text-brand-700 text-xs font-bold">Activo</span>}
+            </label>
+          ))}
+        </div>
+        {exportRolesSaving && <p className="text-xs text-gray-400">Guardando...</p>}
       </div>
     </div>
   );

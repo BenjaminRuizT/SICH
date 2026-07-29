@@ -249,7 +249,7 @@ router.get('/config', requireAdmin, async (req, res) => {
 router.put('/config', requireAdmin, async (req, res) => {
   try {
     const numericKeys = ['inactivity_minutes'];
-    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh', 'ciudad_revision', 'firma_rh_opcional'];
+    const stringKeys = ['nombre_responsable_rh', 'firma_responsable_rh', 'ciudad_revision', 'firma_rh_opcional', 'exportar_responsivas_roles'];
     const allowed = [...numericKeys, ...stringKeys];
     const updates = Object.entries(req.body).filter(([k]) => allowed.includes(k));
 
@@ -473,6 +473,13 @@ router.post('/reset', requireAdmin, async (req, res) => {
     console.error('POST /reset:', err.message);
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally { client.release(); }
+});
+
+router.get('/exportar-responsivas-roles', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT value FROM app_config WHERE key='exportar_responsivas_roles'");
+    res.json({ roles: rows[0]?.value || 'admin' });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
 module.exports = router;
