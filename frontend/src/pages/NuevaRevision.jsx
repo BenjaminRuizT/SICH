@@ -168,6 +168,7 @@ export default function NuevaRevision() {
   const [rhConfig, setRhConfig] = useState({ nombre: '', firma: null, ciudad: '', firmaOpcional: false });
   const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [auditorFirma, setAuditorFirma] = useState(null);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -182,6 +183,13 @@ export default function NuevaRevision() {
       setEquipoForm(f => ({ ...f, nombre_responsable_rh: nombre, firma_responsable_rh: firma }));
     }).catch(() => {});
     api.get('/herramientas/catalog').then(r => setCatalog(r.data)).catch(() => {});
+    api.get('/usuarios/me/firma').then(r => {
+      if (r.data.firma) {
+        setAuditorFirma(r.data.firma);
+        setAutoForm(f => ({ ...f, firma_auditor: r.data.firma }));
+        setEquipoForm(f => ({ ...f, firma_auditor: r.data.firma }));
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [paso]);
@@ -315,8 +323,8 @@ export default function NuevaRevision() {
     setRevisarEquipo(false);
     setAutoSelec(null);
     setEquipoSelec(null);
-    setAutoForm({ ...emptyAuto, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma });
-    setEquipoForm({ ...emptyEquipo, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma });
+    setAutoForm({ ...emptyAuto, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma, firma_auditor: auditorFirma });
+    setEquipoForm({ ...emptyEquipo, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma, firma_auditor: auditorFirma });
     setErrors({});
   };
 
@@ -674,8 +682,22 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
               onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
-              onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
+            {auditorFirma && autoForm.firma_auditor === auditorFirma && (
+              <div className="space-y-1">
+                <p className="label">Firma del auditor</p>
+                <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
+                  <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
+                </div>
+                <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
+                <SignatureCanvas label="" signerName={nombreAuditor}
+                  onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
+              </div>
+            )}
+            {!(auditorFirma && autoForm.firma_auditor === auditorFirma) && (
+              <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
+                onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
+            )}
             <Err field="firma_auditor" />
           </div>
 
@@ -763,8 +785,22 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
-              onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+            {auditorFirma && equipoForm.firma_auditor === auditorFirma && (
+              <div className="space-y-1">
+                <p className="label">Firma del auditor</p>
+                <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
+                  <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
+                </div>
+                <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
+                <SignatureCanvas label="" signerName={nombreAuditor}
+                  onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+              </div>
+            )}
+            {!(auditorFirma && equipoForm.firma_auditor === auditorFirma) && (
+              <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
+                onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+            )}
             <Err field="firma_auditor" />
           </div>
 

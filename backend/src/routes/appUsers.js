@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const rateLimit = require('express-rate-limit');
 const pool = require('../db');
 const { requireAdmin, requireAuth } = require('../middleware/auth');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -37,6 +38,31 @@ router.put('/me/password', requireAuth, passwordChangeLimiter, async (req, res) 
 
     const hash = await bcrypt.hash(new_password, BCRYPT_ROUNDS);
     await pool.query('UPDATE app_users SET password_hash=$1 WHERE id=$2', [hash, req.user.id]);
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// Firma personal del auditor
+router.get('/me/firma', requireAuth, async (req, res) => {
+  try {
+    const { rows: [user] } = await pool.query('SELECT firma FROM app_users WHERE id=$1', [req.user.id]);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json({ firma: user.firma ? decrypt(user.firma) : null });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+router.put('/me/firma', requireAuth, async (req, res) => {
+  try {
+    const { firma } = req.body;
+    if (!firma) return res.status(400).json({ error: 'Firma requerida' });
+    await pool.query('UPDATE app_users SET firma=$1 WHERE id=$2', [encrypt(firma), req.user.id]);
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+router.delete('/me/firma', requireAuth, async (req, res) => {
+  try {
+    await pool.query('UPDATE app_users SET firma=NULL WHERE id=$1', [req.user.id]);
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });

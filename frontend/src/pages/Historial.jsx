@@ -35,10 +35,22 @@ export default function Historial() {
   useEffect(() => { if (successBanner) setTimeout(() => setSuccessBanner(false), 4000); }, [successBanner]);
 
   const exportar = async () => {
-    const params = new URLSearchParams();
-    if (desde) params.set('desde', desde);
-    if (hasta) params.set('hasta', hasta);
-    window.open(`/api/exportar/revisiones?${params}`, '_blank');
+    try {
+      const params = new URLSearchParams();
+      if (desde) params.set('desde', desde);
+      if (hasta) params.set('hasta', hasta);
+      const r = await api.get(`/exportar/revisiones?${params}`, { responseType: 'blob' });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SICHE_Revisiones_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al exportar. Intenta de nuevo.');
+    }
   };
 
   const verDetalle = async (id) => {

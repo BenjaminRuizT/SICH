@@ -79,9 +79,11 @@ router.get('/revisiones', requireAdmin, async (req, res) => {
         fecha_revision: r.fecha_revision ? new Date(r.fecha_revision).toLocaleString('es-MX') : '',
       });
     });
+    const buffer = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="SICHE_Revisiones_${new Date().toISOString().slice(0,10)}.xlsx"`);
-    await wb.xlsx.write(res);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
