@@ -477,8 +477,9 @@ router.post('/reset', requireAdmin, async (req, res) => {
 
 router.get('/exportar-responsivas-roles', requireAuth, async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT value FROM app_config WHERE key='exportar_responsivas_roles'");
-    res.json({ roles: rows[0]?.value || 'admin' });
+    if (req.user.rol === 'admin') return res.json({ canExport: true });
+    const { rows: [u] } = await pool.query('SELECT can_export_responsivas FROM app_users WHERE id=$1', [req.user.id]);
+    res.json({ canExport: u?.can_export_responsivas === true });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 

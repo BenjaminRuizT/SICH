@@ -7,18 +7,14 @@ const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { decrypt } = require('../utils/crypto');
 
-async function getExportRoles() {
-  try {
-    const { rows } = await pool.query("SELECT value FROM app_config WHERE key='exportar_responsivas_roles'");
-    return (rows[0]?.value || 'admin').split(',').map(r => r.trim());
-  } catch { return ['admin']; }
-}
-
 function requireExportAccess(req, res, next) {
   requireAuth(req, res, async () => {
-    const roles = await getExportRoles();
-    if (!roles.includes(req.user.rol)) return res.status(403).json({ error: 'Sin acceso para exportar responsivas' });
-    next();
+    if (req.user.rol === 'admin') return next();
+    try {
+      const { rows: [u] } = await pool.query('SELECT can_export_responsivas FROM app_users WHERE id=$1', [req.user.id]);
+      if (u?.can_export_responsivas === true) return next();
+      return res.status(403).json({ error: 'Sin acceso para exportar responsivas' });
+    } catch { return res.status(500).json({ error: 'Error interno del servidor' }); }
   });
 }
 

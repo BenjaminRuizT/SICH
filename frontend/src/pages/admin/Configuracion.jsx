@@ -33,8 +33,9 @@ export default function Configuracion() {
   const [confirmDeleteRH, setConfirmDeleteRH] = useState(false);
   const [deletingRH, setDeletingRH] = useState(false);
 
-  const [exportRoles, setExportRoles] = useState('admin');
-  const [exportRolesSaving, setExportRolesSaving] = useState(false);
+  const [exportUsers, setExportUsers] = useState([]);
+  const [exportUsersLoading, setExportUsersLoading] = useState(false);
+  const [savingExportUser, setSavingExportUser] = useState(null);
 
   const loadPendientes = () => {
     setPendientesLoading(true);
@@ -63,9 +64,8 @@ export default function Configuracion() {
       .catch(() => setMinutes('20'))
       .finally(() => setLoading(false));
     loadPendientes();
-    api.get('/admin/exportar-responsivas-roles').then(r => {
-      setExportRoles(r.data.roles || 'admin');
-    }).catch(() => {});
+    setExportUsersLoading(true);
+    axios.get('/api/usuarios').then(r => setExportUsers(r.data)).catch(() => {}).finally(() => setExportUsersLoading(false));
   }, []);
 
   const save = async (e) => {
@@ -136,13 +136,14 @@ export default function Configuracion() {
     } finally { setDeletingRH(false); }
   };
 
-  const saveExportRoles = async (val) => {
-    setExportRolesSaving(true);
+  const toggleExportUser = async (userId, current) => {
+    setSavingExportUser(userId);
+    const newVal = !current;
     try {
-      await axios.put('/api/admin/config', { exportar_responsivas_roles: val });
-      setExportRoles(val);
+      await axios.patch(`/api/usuarios/${userId}`, { can_export_responsivas: newVal });
+      setExportUsers(prev => prev.map(u => u.id === userId ? { ...u, can_export_responsivas: newVal } : u));
     } catch {}
-    finally { setExportRolesSaving(false); }
+    finally { setSavingExportUser(null); }
   };
 
   const aplicarFirma = async () => {
@@ -388,33 +389,51 @@ export default function Configuracion() {
       <div className="card space-y-3">
         <h2 className="font-semibold text-gray-700">Exportar responsivas (ZIP)</h2>
         <p className="text-sm text-gray-500">
-          Define quien puede ver los botones para descargar todas las responsivas en formato ZIP desde el Historial.
+          Selecciona qué usuarios pueden ver y usar los botones de descarga ZIP de responsivas en el Historial. Los administradores siempre tienen acceso.
         </p>
-        <div className="space-y-2">
-          {[
-            { value: 'admin', label: 'Solo administradores' },
-            { value: 'admin,auditor', label: 'Administradores y auditores' },
-          ].map(opt => (
-            <label key={opt.value}
-              className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-gray-50"
-              style={{ borderColor: exportRoles === opt.value ? '#134e4a' : '#e5e7eb' }}>
-              <input
-                type="radio"
-                name="exportRoles"
-                value={opt.value}
-                checked={exportRoles === opt.value}
-                disabled={exportRolesSaving}
-                onChange={() => saveExportRoles(opt.value)}
-                className="accent-brand-700"
-              />
-              <div>
-                <p className="font-medium text-sm text-gray-800">{opt.label}</p>
-              </div>
-              {exportRoles === opt.value && <span className="ml-auto text-brand-700 text-xs font-bold">Activo</span>}
-            </label>
-          ))}
-        </div>
-        {exportRolesSaving && <p className="text-xs text-gray-400">Guardando...</p>}
+        {exportUsersLoading ? (
+          <p className="text-sm text-gray-400">Cargando usuarios...</p>
+        ) : (
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 overflow-hidden">
+            {exportUsers.map(u => {
+              const isAdmin = u.rol === 'admin';
+              const active = isAdmin || u.can_export_responsivas;
+              const isSaving = savingExportUser === u.id;
+              return (
+                <div key={u.id} className="flex items-center justify-between px-4 py-3 bg-white">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-gray-900 truncate">{u.nombre}</p>
+                    <p className="text-xs text-gray-400">
+                      {u.username} · <span className={`font-semibold ${isAdmin ? 'text-brand-700' : 'text-gray-500'}`}>{isAdmin ? 'Admin' : 'Auditor'}</span>
+                    </p>
+                  </div>
+                  {isAdmin ? (
+                    <span className="text-xs text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-full font-semibold shrink-0">
+                      Siempre activo
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => toggleExportUser(u.id, u.can_export_responsivas)}
+                      title={active ? 'Quitar acceso' : 'Dar acceso'}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                        active ? 'bg-brand-700' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        active ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {exportUsers.length === 0 && (
+              <p className="px-4 py-3 text-sm text-gray-400">Sin usuarios registrados.</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

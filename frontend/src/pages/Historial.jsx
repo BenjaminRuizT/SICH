@@ -30,10 +30,9 @@ export default function Historial() {
   const [canExportResponsivas, setCanExportResponsivas] = useState(false);
 
   useEffect(() => {
-    api.get('/admin/exportar-responsivas-roles').then(r => {
-      const roles = (r.data.roles || 'admin').split(',').map(s => s.trim());
-      setCanExportResponsivas(roles.includes(user?.rol));
-    }).catch(() => {});
+    api.get('/admin/exportar-responsivas-roles')
+      .then(r => setCanExportResponsivas(r.data.canExport === true))
+      .catch(() => {});
   }, [user]);
 
   const cargar = useCallback(async () => {
