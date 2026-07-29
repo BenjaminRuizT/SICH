@@ -252,7 +252,7 @@ export default function Documentacion() {
                               ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │              PostgreSQL 16  (Railway managed)                        │
-│  9 tablas · 7 migraciones                                           │
+│  9 tablas · 12 migraciones                                          │
 │  Fotos y firmas almacenadas cifradas (AES-256-GCM) — ilegibles      │
 │  sin la ENCRYPTION_KEY aunque se acceda directamente al dump de BD  │
 └─────────────────────────────────────────────────────────────────────┘`}
@@ -275,8 +275,10 @@ export default function Documentacion() {
               ['Empleados', 'Catálogo de empleados — búsqueda y gestión', <Badge color="amber">Admin</Badge>],
               ['Herramientas', 'Catálogo MAF con historial de revisiones por activo', <Badge color="amber">Admin</Badge>],
               ['Importar Datos', 'Carga masiva de empleados y herramientas desde Excel o JSON', <Badge color="amber">Admin</Badge>],
-              ['Exportar', 'Reporte Excel de revisiones con filtro por fecha', <Badge color="amber">Admin</Badge>],
-              ['Configuración', 'Parámetros del sistema: RH (nombre + firma + modo opcional + pendientes de firma), ciudad, inactividad', <Badge color="amber">Admin</Badge>],
+              ['Mi Firma (auditor)', 'Captura y gestión de la firma pre-guardada del auditor, disponible como acción rápida en el Dashboard', <Badge color="blue">Todos</Badge>],
+              ['Exportar Excel', 'Reporte Excel de revisiones con filtro por fecha', <Badge color="amber">Admin</Badge>],
+              ['Exportar ZIP Responsivas', 'Descarga masiva de cartas responsivas (auto y/o equipo) en ZIP con un PDF por empleado', <Badge color="blue">Configurado por admin</Badge>],
+              ['Configuración', 'Parámetros del sistema: RH (nombre + firma + modo opcional + pendientes de firma), ciudad, inactividad, permisos de exportación por usuario', <Badge color="amber">Admin</Badge>],
               ['Reset', 'Limpieza controlada de datos con opciones granulares', <Badge color="amber">Admin</Badge>],
               ['Documentación', 'Visualización y exportación de este documento técnico', <Badge color="amber">Admin</Badge>],
             ]}
@@ -295,6 +297,7 @@ export default function Documentacion() {
               ['Rate limit — pwd change', '5 peticiones / 15 min por usuario', <Badge color="teal">OWASP A04:2021</Badge>],
               ['Rate limit — verificar', '30 peticiones / min por IP (endpoint público)', <Badge color="teal">OWASP A04:2021</Badge>],
               ['Bloqueo de cuenta', '5 intentos fallidos → 15 min (persistido en PostgreSQL)', <Badge color="teal">OWASP A07:2021</Badge>],
+              ['Desbloqueo manual por admin', 'El administrador puede desbloquear cuentas antes del tiempo de espera desde Admin → Usuarios. Alerta visible en el Dashboard.', <Badge color="teal">OWASP A07:2021</Badge>],
               ['Content Security Policy', "defaultSrc: 'self' · scriptSrc: 'self' · frameAncestors: none", <Badge color="teal">OWASP A05:2021</Badge>],
               ['HTTP Strict Transport Security', 'HSTS habilitado vía Helmet en producción', <Badge color="teal">OWASP A02:2021</Badge>],
               ['Clickjacking', 'X-Frame-Options: DENY + CSP frameAncestors: none', <Badge color="teal">OWASP A05:2021</Badge>],
@@ -382,7 +385,12 @@ export default function Documentacion() {
               [<Badge color="blue">GET</Badge>, '/api/herramientas/search', <Badge color="blue">Auth</Badge>, 'Búsqueda de herramientas por código de barras'],
               [<Badge color="blue">GET</Badge>, '/api/herramientas/catalog', <Badge color="blue">Auth</Badge>, 'Catálogo de marcas y modelos de equipo'],
               [<Badge color="amber">PUT</Badge>, '/api/usuarios/me/password', <Badge color="blue">Auth</Badge>, 'Cambio de contraseña (rate limited: 5/15min)'],
+              [<Badge color="blue">GET</Badge>, '/api/usuarios/me/firma', <Badge color="blue">Auth</Badge>, 'Obtener firma pre-guardada del auditor (base64)'],
+              [<Badge color="amber">PUT</Badge>, '/api/usuarios/me/firma', <Badge color="blue">Auth</Badge>, 'Guardar o actualizar la firma pre-guardada del auditor'],
+              [<Badge color="red">DELETE</Badge>, '/api/usuarios/me/firma', <Badge color="blue">Auth</Badge>, 'Eliminar la firma pre-guardada del auditor'],
               [<Badge color="blue">GET</Badge>, '/api/exportar/revisiones', <Badge color="amber">Admin</Badge>, 'Exportar Excel de revisiones con filtro por fecha'],
+              [<Badge color="blue">GET</Badge>, '/api/responsivas/auto', <Badge color="blue">Configurado</Badge>, 'Exportar ZIP con cartas responsivas de autos (PDF por empleado)'],
+              [<Badge color="blue">GET</Badge>, '/api/responsivas/equipo', <Badge color="blue">Configurado</Badge>, 'Exportar ZIP con cartas responsivas de equipo (PDF por empleado)'],
               [<Badge color="blue">GET</Badge>, '/api/admin/config', <Badge color="amber">Admin</Badge>, 'Configuración completa del sistema'],
               [<Badge color="amber">PUT</Badge>, '/api/admin/config', <Badge color="amber">Admin</Badge>, 'Actualizar parámetros de configuración'],
               [<Badge color="blue">GET</Badge>, '/api/admin/sysinfo', <Badge color="amber">Admin</Badge>, 'Estadísticas y estado del sistema'],
@@ -398,6 +406,9 @@ export default function Documentacion() {
               [<Badge color="red">DELETE</Badge>, '/api/admin/config/rh', <Badge color="amber">Admin</Badge>, 'Eliminar nombre y firma del Responsable de RH de app_config'],
               [<Badge color="blue">GET</Badge>, '/api/admin/pendientes-firma-rh', <Badge color="amber">Admin</Badge>, 'Listar revisiones con firma_rh_pendiente=true (cartas sin firma RH)'],
               [<Badge color="green">POST</Badge>, '/api/admin/aplicar-firma-rh', <Badge color="amber">Admin</Badge>, 'Aplicar firma RH actual a todos los documentos pendientes (actualiza revision_auto + revision_equipo)'],
+              [<Badge color="blue">GET</Badge>, '/api/admin/exportar-responsivas-roles', <Badge color="blue">Auth</Badge>, 'Verificar si el usuario actual tiene permiso de exportar responsivas (admin siempre sí; auditor según can_export_responsivas)'],
+              [<Badge color="blue">GET</Badge>, '/api/admin/usuarios-bloqueados', <Badge color="amber">Admin</Badge>, 'Listar cuentas con bloqueo activo (locked_until > NOW()), con nombre, intentos fallidos y tiempo restante'],
+              [<Badge color="red">DELETE</Badge>, '/api/admin/usuarios-bloqueados/:username', <Badge color="amber">Admin</Badge>, 'Desbloquear manualmente una cuenta eliminando su registro de login_attempts'],
             ]}
           />
         </Section>
@@ -407,7 +418,7 @@ export default function Documentacion() {
           <Table
             headers={['Tabla', 'Propósito', 'Columnas clave']}
             rows={[
-              ['app_users', 'Cuentas de acceso al sistema', 'id · username · password_hash · rol · is_active · last_login'],
+              ['app_users', 'Cuentas de acceso al sistema', 'id · username · password_hash · rol · is_active · last_login · firma (AES-256-GCM) · can_export_responsivas'],
               ['empleados', 'Catálogo de empleados OXXO', 'id · numero_empleado (UNIQUE) · nombre_completo · posicion · plaza · region'],
               ['herramientas', 'Catálogo MAF (autos y equipo de cómputo)', 'id · tipo · codigo_barras · no_activo · marca · modelo · serie · plaza · empleado_id'],
               ['revisiones', 'Registro maestro de auditorías', 'id (folio SICH) · empleado_id · app_user_id · auditor_nombre · fecha_revision · tiene_auto · tiene_equipo · firma_rh_pendiente'],
@@ -431,6 +442,11 @@ export default function Documentacion() {
                 ['005_config_lockout.sql', 'Tablas login_attempts y app_config · default inactivity_minutes=20'],
                 ['006_placas.sql', 'Campo foto_poliza_seguro + precarga de placas desde catálogo SIGE (181 autos)'],
                 ['007_firma_rh_pendiente.sql', 'Columna firma_rh_pendiente en revisiones + clave firma_rh_opcional en app_config'],
+                ['008_firma_auditor.sql', 'Columna firma (TEXT) en app_users para firma pre-guardada del auditor (AES-256-GCM)'],
+                ['009_auth_log.sql', 'Tabla auth_log para auditoría de accesos (evento, IP, user-agent, timestamp)'],
+                ['010_pdfkit.sql', 'Tabla auxiliar para generación de PDF — sin cambios de esquema (migraciones numéricas)'],
+                ['011_exportar_responsivas_roles.sql', 'Clave exportar_responsivas_roles en app_config (valor legacy; reemplazado por can_export_responsivas)'],
+                ['012_can_export_responsivas.sql', 'Columna can_export_responsivas BOOLEAN en app_users (default false; true para admins)'],
               ]}
             />
           </div>
@@ -445,7 +461,7 @@ export default function Documentacion() {
               ['03', 'Selección de herramienta', 'El auditor selecciona la herramienta a revisar mediante código de barras o búsqueda en catálogo MAF.'],
               ['04', 'Captura física del vehículo', 'Registro de placas, no. serie, kilometraje, estado general, licencia, llanta refacción, póliza de seguro. Captura de fotos.'],
               ['05', 'Registro de daños', 'Panel interactivo de daños con etiquetas descriptivas y campo de observaciones.'],
-              ['06', 'Firmas digitales', 'Captura de firma del empleado y firma del auditor en canvas táctil. La firma del Responsable de RH se inyecta automáticamente si está configurada. Si el modo "firma opcional" está activo, la auditoría puede completarse sin ella; el documento quedará marcado como pendiente de firma RH.'],
+              ['06', 'Firmas digitales', 'Captura de firma del empleado y firma del auditor en canvas táctil. Si el auditor tiene una firma pre-guardada en su perfil (Dashboard → Mi Firma), se precarga automáticamente y puede sobreescribirse. La firma del Responsable de RH se inyecta automáticamente si está configurada. Si el modo "firma opcional" está activo, la auditoría puede completarse sin ella; el documento quedará marcado como pendiente de firma RH.'],
               ['07', 'Resumen y confirmación', 'Vista previa completa de todos los datos antes de guardar. El auditor puede regresar a cualquier paso.'],
               ['08', 'Registro en base de datos', 'Transacción atómica: INSERT en revisiones (con firma_rh_pendiente=true si falta firma RH) + revision_auto / revision_equipo. Fotos y firmas se cifran con AES-256-GCM antes de persistir. Asignación de folio SICH-XXXXXX.'],
               ['09', 'Generación de carta responsiva', 'La carta NO se almacena como archivo en ningún servidor. Cada vez que se consulta, el API retorna los datos de la revisión (descifrados en ese momento), React renderiza el HTML al vuelo y el usuario puede imprimirla o exportarla como PDF con window.print(). El PDF solo existe en el navegador mientras está abierto.'],

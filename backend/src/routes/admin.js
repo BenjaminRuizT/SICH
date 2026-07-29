@@ -370,7 +370,7 @@ router.get('/sysinfo', requireAdmin, async (req, res) => {
     const config = {};
     cfg.rows.forEach(r => { config[r.key] = r.value; });
     res.json({
-      version: '2.5.0',
+      version: '2.10.0',
       generated_at: new Date().toISOString(),
       stats: {
         usuarios_activos: parseInt(users.rows[0].count),
@@ -480,6 +480,31 @@ router.get('/exportar-responsivas-roles', requireAuth, async (req, res) => {
     if (req.user.rol === 'admin') return res.json({ canExport: true });
     const { rows: [u] } = await pool.query('SELECT can_export_responsivas FROM app_users WHERE id=$1', [req.user.id]);
     res.json({ canExport: u?.can_export_responsivas === true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+// ---------------------------------------------------------------------------
+// Gestión de usuarios bloqueados
+// ---------------------------------------------------------------------------
+
+router.get('/usuarios-bloqueados', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT la.username, la.count, la.locked_until, la.updated_at,
+             u.nombre, u.id AS user_id
+      FROM login_attempts la
+      LEFT JOIN app_users u ON u.username = la.username
+      WHERE la.locked_until > NOW()
+      ORDER BY la.locked_until DESC
+    `);
+    res.json(rows);
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+router.delete('/usuarios-bloqueados/:username', requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM login_attempts WHERE username=$1', [req.params.username]);
+    res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 

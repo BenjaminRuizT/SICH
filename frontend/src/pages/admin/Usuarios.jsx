@@ -15,8 +15,17 @@ const EyeIcon = ({ open }) => open ? (
   </svg>
 );
 
+const tiempoRestante = (lockedUntil) => {
+  const diff = new Date(lockedUntil) - new Date();
+  if (diff <= 0) return 'Expirando...';
+  const mins = Math.ceil(diff / 60000);
+  return `${mins} min restante${mins !== 1 ? 's' : ''}`;
+};
+
 export default function Usuarios() {
   const [users, setUsers] = useState([]);
+  const [bloqueados, setBloqueados] = useState([]);
+  const [desbloqueando, setDesbloqueando] = useState(null);
   const [modal, setModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -26,7 +35,17 @@ export default function Usuarios() {
   const [showEditPwd, setShowEditPwd] = useState(false);
 
   const cargar = () => api.get('/usuarios').then(r => setUsers(r.data)).catch(() => {});
-  useEffect(() => { cargar(); }, []);
+  const cargarBloqueados = () => api.get('/admin/usuarios-bloqueados').then(r => setBloqueados(r.data)).catch(() => {});
+  useEffect(() => { cargar(); cargarBloqueados(); }, []);
+
+  const desbloquear = async (username) => {
+    setDesbloqueando(username);
+    try {
+      await api.delete(`/admin/usuarios-bloqueados/${encodeURIComponent(username)}`);
+      cargarBloqueados();
+    } catch { alert('Error al desbloquear'); }
+    finally { setDesbloqueando(null); }
+  };
 
   const guardar = async (e) => {
     e.preventDefault();
@@ -81,6 +100,37 @@ export default function Usuarios() {
           + Nuevo
         </button>
       </div>
+
+      {/* Usuarios bloqueados */}
+      {bloqueados.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔒</span>
+            <h2 className="font-bold text-red-800 text-sm">
+              Cuentas bloqueadas ({bloqueados.length})
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {bloqueados.map(b => (
+              <div key={b.username} className="flex items-center justify-between gap-3 bg-white rounded-lg px-3 py-2 border border-red-100">
+                <div>
+                  <p className="font-semibold text-sm">{b.nombre || b.username}</p>
+                  <p className="text-xs text-gray-500">
+                    @{b.username} · {b.count} intentos fallidos · {tiempoRestante(b.locked_until)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => desbloquear(b.username)}
+                  disabled={desbloqueando === b.username}
+                  className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 shrink-0"
+                >
+                  {desbloqueando === b.username ? '...' : 'Desbloquear'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         {users.map(u => (

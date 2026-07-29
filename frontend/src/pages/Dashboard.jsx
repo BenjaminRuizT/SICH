@@ -11,6 +11,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ hoy: 0, total: 0 });
   const [firmaPreview, setFirmaPreview] = useState(null);
   const [showFirmaModal, setShowFirmaModal] = useState(false);
+  const [bloqueadosCount, setBloqueadosCount] = useState(0);
 
   const isAdmin = user?.rol === 'admin';
 
@@ -26,7 +27,10 @@ export default function Dashboard() {
         setFirmaPreview(null);
       }
     }).catch(() => {});
-  }, []);
+    if (isAdmin) {
+      api.get('/admin/usuarios-bloqueados').then(r => setBloqueadosCount(r.data.length)).catch(() => {});
+    }
+  }, [isAdmin]);
 
   const handleFirmaClose = () => {
     setShowFirmaModal(false);
@@ -63,6 +67,27 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Alerta admin: cuentas bloqueadas */}
+      {isAdmin && bloqueadosCount > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-xl p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔒</span>
+            <div>
+              <p className="font-bold text-red-800 text-sm">
+                {bloqueadosCount} cuenta{bloqueadosCount !== 1 ? 's' : ''} bloqueada{bloqueadosCount !== 1 ? 's' : ''}
+              </p>
+              <p className="text-xs text-red-600">Demasiados intentos de inicio de sesión fallidos</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/admin/usuarios')}
+            className="text-xs px-3 py-1.5 rounded-lg font-semibold bg-red-600 text-white hover:bg-red-700 shrink-0"
+          >
+            Gestionar
+          </button>
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="space-y-3">
