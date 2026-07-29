@@ -55,7 +55,7 @@ export default function CartaResponsivaEquipo() {
   const descripcion = [marca, modelo].filter(Boolean).join(' ');
   const codigoBarras = eq.codigo_barras || snap.codigo_barras || '—';
   const serie = eq.serie || snap.serie || '—';
-  const nombreRH = eq.nombre_responsable_rh || rev.auditor_nombre || '';
+  const nombreRH = eq.nombre_responsable_rh || '';
   const folio = fmtFolio(rev.id);
 
   return (
@@ -163,7 +163,7 @@ export default function CartaResponsivaEquipo() {
             <div className="text-[8px] text-gray-500 space-y-0.5">
               <p className="font-semibold text-gray-700">Validez y autenticidad del documento</p>
               <p>Folio: <strong>{folio}</strong> · Generado: {fmtFull(rev.fecha_revision)}</p>
-              <p>Responsable RH: {nombreRH}</p>
+              {nombreRH && <p>Responsable RH: {nombreRH}</p>}
               <p className="font-mono break-all">SHA-256: {hash}</p>
               <p className="mt-1">Documento generado digitalmente por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF.</p>
             </div>
