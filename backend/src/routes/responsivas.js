@@ -601,11 +601,14 @@ async function runGenerarZip(jobId, params) {
     }
 
     // Ensamblar ZIP en memoria
+    const { PassThrough } = require('stream');
     const archive = archiver('zip', { zlib: { level: 6 } });
+    const pass = new PassThrough();
+    archive.pipe(pass);
     const zipChunks = [];
-    archive.on('data', c => zipChunks.push(c));
+    pass.on('data', c => zipChunks.push(c));
     await new Promise((resolve, reject) => {
-      archive.on('end', resolve);
+      pass.on('end', resolve);
       archive.on('error', reject);
       for (const { p, buf } of entries) archive.append(buf, { name: p });
       archive.finalize();
@@ -616,7 +619,7 @@ async function runGenerarZip(jobId, params) {
   } catch (err) {
     console.error(`Error en job ZIP ${jobId}:`, err);
     job.status = 'error';
-    job.error = 'Error al generar el archivo';
+    job.error = err?.message || 'Error desconocido al generar el archivo';
   }
 }
 
