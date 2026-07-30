@@ -208,7 +208,11 @@ export default function Layout({ children }) {
         <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
           <span>🔄 Nueva versión disponible</span>
           <button
-            onClick={() => { markReload(); window.location.replace('/?_=' + Date.now()); }}
+            onClick={async () => {
+              markReload();
+              try { await fetch('/api/force-refresh', { cache: 'no-store' }); } catch {}
+              window.location.href = '/?_=' + Date.now();
+            }}
             className="bg-amber-900 text-amber-50 px-4 py-1 rounded-lg hover:bg-amber-800 transition-colors text-xs font-bold"
           >
             Actualizar ahora

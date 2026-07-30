@@ -702,19 +702,6 @@ export default function NuevaRevision() {
           </div>
 
           <div>
-            <YesNo label="Llanta de refacción" value={autoForm.llanta_refaccion}
-              onChange={v => setAutoForm(p => ({ ...p, llanta_refaccion: v, ...(!v ? { foto_llanta_refaccion: null } : {}) }))} required />
-            <Err field="llanta_refaccion" />
-            {autoForm.llanta_refaccion === true && (
-              <div className="mt-3">
-                <PhotoCapture label="Foto de llanta de refacción"
-                  onCapture={v => setAutoForm(p => ({ ...p, foto_llanta_refaccion: v }))}
-                  value={autoForm.foto_llanta_refaccion} />
-              </div>
-            )}
-          </div>
-
-          <div>
             <YesNo label="Tarjeta de circulación" value={autoForm.tarjeta_circulacion}
               onChange={v => setAutoForm(p => ({ ...p, tarjeta_circulacion: v, ...(!v ? { foto_tarjeta_circulacion: null } : {}) }))} required />
             <Err field="tarjeta_circulacion" />
@@ -723,6 +710,19 @@ export default function NuevaRevision() {
                 <PhotoCapture label="Foto de tarjeta de circulación"
                   onCapture={v => setAutoForm(p => ({ ...p, foto_tarjeta_circulacion: v }))}
                   value={autoForm.foto_tarjeta_circulacion} />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <YesNo label="Llanta de refacción" value={autoForm.llanta_refaccion}
+              onChange={v => setAutoForm(p => ({ ...p, llanta_refaccion: v, ...(!v ? { foto_llanta_refaccion: null } : {}) }))} required />
+            <Err field="llanta_refaccion" />
+            {autoForm.llanta_refaccion === true && (
+              <div className="mt-3">
+                <PhotoCapture label="Foto de llanta de refacción"
+                  onCapture={v => setAutoForm(p => ({ ...p, foto_llanta_refaccion: v }))}
+                  value={autoForm.foto_llanta_refaccion} />
               </div>
             )}
           </div>
