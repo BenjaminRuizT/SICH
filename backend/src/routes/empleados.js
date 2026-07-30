@@ -9,13 +9,17 @@ router.get('/search', requireAuth, async (req, res) => {
     if (!q || q.trim().length < 2) return res.json([]);
     const term = `%${q.trim().toUpperCase()}%`;
     const { rows } = await pool.query(
-      `SELECT id, numero_empleado, nombre_completo, posicion, departamento, plaza, region
-       FROM empleados
-       WHERE is_active=true AND (
-         numero_empleado ILIKE $1 OR
-         UPPER(nombre_completo) LIKE $1
+      `SELECT e.id, e.numero_empleado, e.nombre_completo, e.posicion, e.departamento, e.plaza, e.region,
+              COUNT(r.id)::int AS revision_count,
+              MAX(r.fecha_revision) AS ultima_revision
+       FROM empleados e
+       LEFT JOIN revisiones r ON r.empleado_id = e.id
+       WHERE e.is_active=true AND (
+         e.numero_empleado ILIKE $1 OR
+         UPPER(e.nombre_completo) LIKE $1
        )
-       ORDER BY nombre_completo LIMIT 20`,
+       GROUP BY e.id
+       ORDER BY e.nombre_completo LIMIT 20`,
       [term]
     );
     res.json(rows);

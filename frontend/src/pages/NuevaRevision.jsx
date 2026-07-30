@@ -453,7 +453,14 @@ export default function NuevaRevision() {
               {resultados.map(emp => (
                 <button key={emp.id} onClick={() => seleccionar(emp)}
                   className="w-full text-left px-4 py-3 hover:bg-brand-50 transition-colors">
-                  <p className="font-semibold text-gray-900">{emp.nombre_completo}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-gray-900">{emp.nombre_completo}</p>
+                    {emp.revision_count > 0 && (
+                      <span className="shrink-0 text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full">
+                        {emp.revision_count} revisión{emp.revision_count !== 1 ? 'es' : ''} previa{emp.revision_count !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">#{emp.numero_empleado} · {emp.posicion}</p>
                   <p className="text-xs text-gray-400">{emp.departamento} · {emp.plaza}</p>
                 </button>
@@ -707,10 +714,6 @@ export default function NuevaRevision() {
             )}
           </div>
 
-          <YesNo label="Gato / Cruceta" value={autoForm.gato_cruceta}
-            onChange={v => setAutoForm(p => ({ ...p, gato_cruceta: v }))} required />
-          <Err field="gato_cruceta" />
-
           <div>
             <YesNo label="Tarjeta de circulación" value={autoForm.tarjeta_circulacion}
               onChange={v => setAutoForm(p => ({ ...p, tarjeta_circulacion: v, ...(!v ? { foto_tarjeta_circulacion: null } : {}) }))} required />
@@ -723,6 +726,10 @@ export default function NuevaRevision() {
               </div>
             )}
           </div>
+
+          <YesNo label="Gato / Cruceta" value={autoForm.gato_cruceta}
+            onChange={v => setAutoForm(p => ({ ...p, gato_cruceta: v }))} required />
+          <Err field="gato_cruceta" />
 
           {/* Damage panel */}
           <div className="card">

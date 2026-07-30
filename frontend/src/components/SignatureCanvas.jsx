@@ -83,7 +83,7 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
       <label className="label">{label}</label>
       {signerName && <p className="text-xs text-gray-500 -mt-1">{signerName}</p>}
       <div className={`border-2 rounded-xl overflow-hidden bg-gray-50 ${signed ? 'border-brand-400' : 'border-gray-300'}`}>
-        <canvas ref={canvasRef} width={500} height={160} className="w-full touch-none" />
+        <canvas ref={canvasRef} width={500} height={220} className="w-full touch-none" />
       </div>
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-gray-400">{signed ? '✓ Firma capturada (se guarda automáticamente)' : 'Dibuja la firma arriba'}</p>
