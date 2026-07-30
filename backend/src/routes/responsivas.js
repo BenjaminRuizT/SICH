@@ -381,7 +381,7 @@ async function cartaToPDF(browser, path, authToken) {
   try {
     await page.setCookie({ name: 'siche_token', value: authToken, domain: 'localhost', path: '/' });
     await page.emulateMediaType('print');
-    await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle2', timeout: 30000 });
     return await page.pdf({ format: 'Letter', printBackground: true });
   } finally {
     await page.close();
@@ -594,53 +594,65 @@ async function runGenerarZip(jobId, params, authToken) {
     const browser = await puppeteer.launch({ executablePath: CHROMIUM_EXEC, args: CHROMIUM_ARGS, headless: true });
     try {
       for (const rev of revs) {
-        const emp = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object')
-          ? rev.empleado_snapshot : {};
-        const empName = safeFilename(emp.nombre_completo || '');
-        const folder = `${empName}_${folio(rev.id)}`;
+        try {
+          const emp = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object')
+            ? rev.empleado_snapshot : {};
+          const empName = safeFilename(emp.nombre_completo || '');
+          const folder = `${empName}_${folio(rev.id)}`;
 
-        const rawAuto = autoByRevId[rev.id] || null;
-        const rawEquipo = equipoByRevId[rev.id] || null;
+          const rawAuto = autoByRevId[rev.id] || null;
+          const rawEquipo = equipoByRevId[rev.id] || null;
 
-        // Carta Auto — render via the same React component the user sees
-        if (rawAuto) {
-          const autoPdfBuf = await cartaToPDF(browser, `/carta/auto/${rev.id}`, authToken);
-          entries.push({ p: `${folder}/Carta_Auto.pdf`, buf: autoPdfBuf });
-
-          // foto_condiciones
-          let rawFotos = rawAuto.foto_condiciones;
-          if (typeof rawFotos === 'string') { try { rawFotos = JSON.parse(rawFotos); } catch { rawFotos = []; } }
-          const condFotos = decryptArr(Array.isArray(rawFotos) ? rawFotos : []);
-          condFotos.forEach((f, i) => {
-            const buf = dataUrlToBuffer(f);
-            if (buf) entries.push({ p: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
-          });
-
-          [
-            ['foto_licencia.jpg',           rawAuto.foto_licencia],
-            ['foto_licencia_reverso.jpg',   rawAuto.foto_licencia_reverso],
-            ['foto_tarjeta_circulacion.jpg',rawAuto.foto_tarjeta_circulacion],
-            ['foto_poliza_seguro.jpg',      rawAuto.foto_poliza_seguro],
-            ['foto_llanta_refaccion.jpg',   rawAuto.foto_llanta_refaccion],
-          ].forEach(([name, enc]) => {
-            const val = dec(enc);
-            if (val) {
-              const buf = dataUrlToBuffer(val);
-              if (buf) entries.push({ p: `${folder}/${name}`, buf });
+          // Carta Auto — render via the same React component the user sees
+          if (rawAuto) {
+            try {
+              const autoPdfBuf = await cartaToPDF(browser, `/carta/auto/${rev.id}`, authToken);
+              entries.push({ p: `${folder}/Carta_Auto.pdf`, buf: autoPdfBuf });
+            } catch (pdfErr) {
+              console.error(`ZIP: Carta_Auto rev ${rev.id} falló: ${pdfErr.message}`);
             }
-          });
-        }
 
-        // Carta Equipo — render via the same React component
-        if (rawEquipo) {
-          const equipoPdfBuf = await cartaToPDF(browser, `/carta/equipo/${rev.id}`, authToken);
-          entries.push({ p: `${folder}/Carta_Equipo.pdf`, buf: equipoPdfBuf });
+            // foto_condiciones
+            let rawFotos = rawAuto.foto_condiciones;
+            if (typeof rawFotos === 'string') { try { rawFotos = JSON.parse(rawFotos); } catch { rawFotos = []; } }
+            const condFotos = decryptArr(Array.isArray(rawFotos) ? rawFotos : []);
+            condFotos.forEach((f, i) => {
+              const buf = dataUrlToBuffer(f);
+              if (buf) entries.push({ p: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
+            });
 
-          const fotoEquipo = dec(rawEquipo.foto_equipo);
-          if (fotoEquipo) {
-            const buf = dataUrlToBuffer(fotoEquipo);
-            if (buf) entries.push({ p: `${folder}/foto_equipo.jpg`, buf });
+            [
+              ['foto_licencia.jpg',           rawAuto.foto_licencia],
+              ['foto_licencia_reverso.jpg',   rawAuto.foto_licencia_reverso],
+              ['foto_tarjeta_circulacion.jpg',rawAuto.foto_tarjeta_circulacion],
+              ['foto_poliza_seguro.jpg',      rawAuto.foto_poliza_seguro],
+              ['foto_llanta_refaccion.jpg',   rawAuto.foto_llanta_refaccion],
+            ].forEach(([name, enc]) => {
+              const val = dec(enc);
+              if (val) {
+                const buf = dataUrlToBuffer(val);
+                if (buf) entries.push({ p: `${folder}/${name}`, buf });
+              }
+            });
           }
+
+          // Carta Equipo — render via the same React component
+          if (rawEquipo) {
+            try {
+              const equipoPdfBuf = await cartaToPDF(browser, `/carta/equipo/${rev.id}`, authToken);
+              entries.push({ p: `${folder}/Carta_Equipo.pdf`, buf: equipoPdfBuf });
+            } catch (pdfErr) {
+              console.error(`ZIP: Carta_Equipo rev ${rev.id} falló: ${pdfErr.message}`);
+            }
+
+            const fotoEquipo = dec(rawEquipo.foto_equipo);
+            if (fotoEquipo) {
+              const buf = dataUrlToBuffer(fotoEquipo);
+              if (buf) entries.push({ p: `${folder}/foto_equipo.jpg`, buf });
+            }
+          }
+        } catch (revErr) {
+          console.error(`ZIP: Error procesando rev ${rev.id}: ${revErr.message}`);
         }
 
         job.current = job.current + 1;
