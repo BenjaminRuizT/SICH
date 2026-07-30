@@ -68,7 +68,7 @@ router.delete('/me/firma', requireAuth, async (req, res) => {
 });
 
 router.get('/', requireAdmin, async (req, res) => {
-  const { rows } = await pool.query('SELECT id,username,nombre,rol,is_active,last_login,created_at,can_export_responsivas FROM app_users ORDER BY nombre');
+  const { rows } = await pool.query('SELECT id,username,nombre,rol,is_active,last_login,created_at,can_export_responsivas,can_reabrir_revision FROM app_users ORDER BY nombre');
   res.json(rows);
 });
 
@@ -92,7 +92,7 @@ router.post('/', requireAdmin, async (req, res) => {
 
 router.patch('/:id', requireAdmin, async (req, res) => {
   try {
-    const { nombre, rol, is_active, password, can_export_responsivas } = req.body;
+    const { nombre, rol, is_active, password, can_export_responsivas, can_reabrir_revision } = req.body;
     if (rol !== undefined && !['admin', 'auditor'].includes(rol)) return res.status(400).json({ error: 'Rol inválido' });
     if (password) {
       const pwError = validatePassword(password);
@@ -101,8 +101,10 @@ router.patch('/:id', requireAdmin, async (req, res) => {
       await pool.query('UPDATE app_users SET password_hash=$1 WHERE id=$2', [hash, req.params.id]);
     }
     const { rows } = await pool.query(
-      'UPDATE app_users SET nombre=COALESCE($1,nombre),rol=COALESCE($2,rol),is_active=COALESCE($3,is_active),can_export_responsivas=COALESCE($4,can_export_responsivas) WHERE id=$5 RETURNING id,username,nombre,rol,is_active,can_export_responsivas',
-      [nombre, rol, is_active, can_export_responsivas ?? null, req.params.id]
+      `UPDATE app_users SET nombre=COALESCE($1,nombre),rol=COALESCE($2,rol),is_active=COALESCE($3,is_active),
+       can_export_responsivas=COALESCE($4,can_export_responsivas),can_reabrir_revision=COALESCE($5,can_reabrir_revision)
+       WHERE id=$6 RETURNING id,username,nombre,rol,is_active,can_export_responsivas,can_reabrir_revision`,
+      [nombre, rol, is_active, can_export_responsivas ?? null, can_reabrir_revision ?? null, req.params.id]
     );
     res.json(rows[0]);
   } catch { res.status(400).json({ error: 'Error al actualizar usuario' }); }

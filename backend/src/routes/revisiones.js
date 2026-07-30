@@ -152,4 +152,19 @@ router.get('/:id', requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
+// Eliminar revisión — solo admin o usuarios con can_reabrir_revision
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const isAdmin = req.user.rol === 'admin';
+    if (!isAdmin) {
+      const { rows: [u] } = await pool.query('SELECT can_reabrir_revision FROM app_users WHERE id=$1', [req.user.id]);
+      if (!u?.can_reabrir_revision) return res.status(403).json({ error: 'Sin permiso para eliminar revisiones' });
+    }
+    const { rows: [rev] } = await pool.query('SELECT id FROM revisiones WHERE id=$1', [req.params.id]);
+    if (!rev) return res.status(404).json({ error: 'Revisión no encontrada' });
+    await pool.query('DELETE FROM revisiones WHERE id=$1', [req.params.id]);
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
 module.exports = router;

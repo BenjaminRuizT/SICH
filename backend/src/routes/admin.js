@@ -483,6 +483,14 @@ router.get('/exportar-responsivas-roles', requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
+router.get('/reabrir-revision-roles', requireAuth, async (req, res) => {
+  try {
+    if (req.user.rol === 'admin') return res.json({ canReabrir: true });
+    const { rows: [u] } = await pool.query('SELECT can_reabrir_revision FROM app_users WHERE id=$1', [req.user.id]);
+    res.json({ canReabrir: u?.can_reabrir_revision === true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
 // ---------------------------------------------------------------------------
 // Gestión de usuarios bloqueados
 // ---------------------------------------------------------------------------

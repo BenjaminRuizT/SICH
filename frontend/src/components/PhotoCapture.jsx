@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 function compressImage(file, maxPx = 1200, quality = 0.78) {
   return new Promise((resolve) => {
@@ -23,20 +23,30 @@ function compressImage(file, maxPx = 1200, quality = 0.78) {
 
 export default function PhotoCapture({ label, onCapture, value, multiple = false, sublabel = '', maxPhotos = null }) {
   const cameraRef = useRef(null);
-  const galleryRef = useRef(null);
-  const [previews, setPreviews] = useState(multiple ? (value || []) : (value ? [value] : []));
+
+  const toArr = (v) => multiple ? (v || []) : (v ? [v] : []);
+  const [previews, setPreviews] = useState(() => toArr(value));
+
+  // Sync with external value changes (e.g. form reset, parent state update)
+  useEffect(() => {
+    setPreviews(toArr(value));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, multiple]);
 
   const handleFiles = async (e) => {
     const files = Array.from(e.target.files);
+    if (!files.length) return;
     const compressed = await Promise.all(files.map(f => compressImage(f)));
+    const valid = compressed.filter(Boolean);
+    if (!valid.length) return;
     if (multiple) {
-      const all = [...previews, ...compressed];
+      const all = [...previews, ...valid];
       const capped = maxPhotos ? all.slice(0, maxPhotos) : all;
       setPreviews(capped);
       onCapture(capped);
     } else {
-      setPreviews([compressed[0]]);
-      onCapture(compressed[0]);
+      setPreviews([valid[0]]);
+      onCapture(valid[0]);
     }
     e.target.value = '';
   };
@@ -57,7 +67,7 @@ export default function PhotoCapture({ label, onCapture, value, multiple = false
       {sublabel && <p className="text-xs text-gray-500 -mt-1">{sublabel}</p>}
       {multiple && maxPhotos && <p className="text-xs text-gray-400 -mt-1">{previews.length}/{maxPhotos} fotos</p>}
       <div className="flex flex-wrap gap-2">
-        {previews.map((src, i) => (
+        {previews.map((src, i) => src && (
           <div key={i} className="relative">
             <img src={src} alt="" className="h-24 w-24 object-cover rounded-xl border border-gray-200" />
             <button type="button" onClick={() => remove(i)}
@@ -67,29 +77,16 @@ export default function PhotoCapture({ label, onCapture, value, multiple = false
           </div>
         ))}
         {!maxReached && (
-          <div className="flex gap-1">
-            <button type="button"
-              onClick={() => cameraRef.current.click()}
-              title="Tomar foto con cámara"
-              className="h-24 w-20 border-2 border-dashed border-brand-400 rounded-xl flex flex-col items-center justify-center text-brand-600 hover:bg-brand-50 transition-colors text-sm">
-              <span className="text-2xl">📷</span>
-              <span className="text-[10px] mt-1">Cámara</span>
-            </button>
-            <button type="button"
-              onClick={() => galleryRef.current.click()}
-              title="Seleccionar de galería"
-              className="h-24 w-20 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors text-sm">
-              <span className="text-2xl">🖼</span>
-              <span className="text-[10px] mt-1">Galería</span>
-            </button>
-          </div>
+          <button type="button"
+            onClick={() => cameraRef.current.click()}
+            title="Tomar foto"
+            className="h-24 w-24 border-2 border-dashed border-brand-400 rounded-xl flex flex-col items-center justify-center text-brand-600 hover:bg-brand-50 transition-colors text-sm">
+            <span className="text-2xl">📷</span>
+            <span className="text-[10px] mt-1">Cámara</span>
+          </button>
         )}
       </div>
-      {/* Camera input */}
       <input ref={cameraRef} type="file" accept="image/*" capture="environment"
-        multiple={multiple} className="hidden" onChange={handleFiles} />
-      {/* Gallery input (no capture) */}
-      <input ref={galleryRef} type="file" accept="image/*"
         multiple={multiple} className="hidden" onChange={handleFiles} />
     </div>
   );

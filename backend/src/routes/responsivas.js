@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const router = require('express').Router();
 const PDFDocument = require('pdfkit');
+const puppeteer = require('puppeteer-core');
 const archiver = require('archiver');
 const path = require('path');
 const fs = require('fs');
@@ -369,6 +370,24 @@ u{text-decoration:underline;padding:0 4px;display:inline-block;min-width:120px}
 }
 
 
+const CHROMIUM_EXEC = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
+const CHROMIUM_ARGS = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'];
+
+// Renders the app carta URL exactly as the browser would (same React component).
+// Reuses an existing puppeteer browser instance per ZIP job for performance.
+async function cartaToPDF(browser, path, authToken) {
+  const port = process.env.PORT || 3001;
+  const page = await browser.newPage();
+  try {
+    await page.setCookie({ name: 'siche_token', value: authToken, domain: 'localhost', path: '/' });
+    await page.emulateMediaType('print');
+    await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle0', timeout: 30000 });
+    return await page.pdf({ format: 'Letter', printBackground: true });
+  } finally {
+    await page.close();
+  }
+}
+
 function buildResumenPDF(rev, rawAuto, rawEquipo) {
   return new Promise((resolve, reject) => {
     try {
@@ -530,7 +549,7 @@ setInterval(() => {
   }
 }, 300000);
 
-async function runGenerarZip(jobId, params) {
+async function runGenerarZip(jobId, params, authToken) {
   const job = jobs.get(jobId);
   if (!job) return;
 
@@ -571,69 +590,63 @@ async function runGenerarZip(jobId, params) {
 
     const entries = [];
 
-    for (const rev of revs) {
-      const emp = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object')
-        ? rev.empleado_snapshot : {};
-      const empName = safeFilename(emp.nombre_completo || '');
-      const folder = `${empName}_${folio(rev.id)}`;
+    // Launch one browser for all PDFs in this ZIP job
+    const browser = await puppeteer.launch({ executablePath: CHROMIUM_EXEC, args: CHROMIUM_ARGS, headless: true });
+    try {
+      for (const rev of revs) {
+        const emp = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object')
+          ? rev.empleado_snapshot : {};
+        const empName = safeFilename(emp.nombre_completo || '');
+        const folder = `${empName}_${folio(rev.id)}`;
 
-      const revObj = {
-        id: rev.id,
-        fecha_revision: rev.fecha_revision,
-        auditor_nombre: rev.auditor_nombre,
-        empleado_snapshot: emp,
-        _ciudad: rev.ciudad || '',
-      };
+        const rawAuto = autoByRevId[rev.id] || null;
+        const rawEquipo = equipoByRevId[rev.id] || null;
 
-      const rawAuto = autoByRevId[rev.id] || null;
-      const rawEquipo = equipoByRevId[rev.id] || null;
+        // Carta Auto — render via the same React component the user sees
+        if (rawAuto) {
+          const autoPdfBuf = await cartaToPDF(browser, `/carta/auto/${rev.id}`, authToken);
+          entries.push({ p: `${folder}/Carta_Auto.pdf`, buf: autoPdfBuf });
 
-      // Resumen
-      const resumenBuf = await buildResumenPDF(revObj, rawAuto, rawEquipo);
-      entries.push({ p: `${folder}/Resumen.pdf`, buf: resumenBuf });
+          // foto_condiciones
+          let rawFotos = rawAuto.foto_condiciones;
+          if (typeof rawFotos === 'string') { try { rawFotos = JSON.parse(rawFotos); } catch { rawFotos = []; } }
+          const condFotos = decryptArr(Array.isArray(rawFotos) ? rawFotos : []);
+          condFotos.forEach((f, i) => {
+            const buf = dataUrlToBuffer(f);
+            if (buf) entries.push({ p: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
+          });
 
-      // Carta Auto + fotos
-      if (rawAuto) {
-        const autoHtml = buildAutoHTML(revObj, rawAuto);
-        entries.push({ p: `${folder}/Carta_Auto.html`, buf: Buffer.from(autoHtml, 'utf-8') });
-
-        // foto_condiciones: JSONB → array (defensive parse si pg devuelve string)
-        let rawFotos = rawAuto.foto_condiciones;
-        if (typeof rawFotos === 'string') { try { rawFotos = JSON.parse(rawFotos); } catch { rawFotos = []; } }
-        const condFotos = decryptArr(Array.isArray(rawFotos) ? rawFotos : []);
-        condFotos.forEach((f, i) => {
-          const buf = dataUrlToBuffer(f);
-          if (buf) entries.push({ p: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
-        });
-
-        [
-          ['foto_licencia.jpg',           rawAuto.foto_licencia],
-          ['foto_licencia_reverso.jpg',   rawAuto.foto_licencia_reverso],
-          ['foto_tarjeta_circulacion.jpg',rawAuto.foto_tarjeta_circulacion],
-          ['foto_poliza_seguro.jpg',      rawAuto.foto_poliza_seguro],
-          ['foto_llanta_refaccion.jpg',   rawAuto.foto_llanta_refaccion],
-        ].forEach(([name, enc]) => {
-          const val = dec(enc);
-          if (val) {
-            const buf = dataUrlToBuffer(val);
-            if (buf) entries.push({ p: `${folder}/${name}`, buf });
-          }
-        });
-      }
-
-      // Carta Equipo + foto
-      if (rawEquipo) {
-        const equipoHtml = buildEquipoHTML(revObj, rawEquipo, revObj._ciudad || '');
-        entries.push({ p: `${folder}/Carta_Equipo.html`, buf: Buffer.from(equipoHtml, 'utf-8') });
-
-        const fotoEquipo = dec(rawEquipo.foto_equipo);
-        if (fotoEquipo) {
-          const buf = dataUrlToBuffer(fotoEquipo);
-          if (buf) entries.push({ p: `${folder}/foto_equipo.jpg`, buf });
+          [
+            ['foto_licencia.jpg',           rawAuto.foto_licencia],
+            ['foto_licencia_reverso.jpg',   rawAuto.foto_licencia_reverso],
+            ['foto_tarjeta_circulacion.jpg',rawAuto.foto_tarjeta_circulacion],
+            ['foto_poliza_seguro.jpg',      rawAuto.foto_poliza_seguro],
+            ['foto_llanta_refaccion.jpg',   rawAuto.foto_llanta_refaccion],
+          ].forEach(([name, enc]) => {
+            const val = dec(enc);
+            if (val) {
+              const buf = dataUrlToBuffer(val);
+              if (buf) entries.push({ p: `${folder}/${name}`, buf });
+            }
+          });
         }
-      }
 
-      job.current = job.current + 1;
+        // Carta Equipo — render via the same React component
+        if (rawEquipo) {
+          const equipoPdfBuf = await cartaToPDF(browser, `/carta/equipo/${rev.id}`, authToken);
+          entries.push({ p: `${folder}/Carta_Equipo.pdf`, buf: equipoPdfBuf });
+
+          const fotoEquipo = dec(rawEquipo.foto_equipo);
+          if (fotoEquipo) {
+            const buf = dataUrlToBuffer(fotoEquipo);
+            if (buf) entries.push({ p: `${folder}/foto_equipo.jpg`, buf });
+          }
+        }
+
+        job.current = job.current + 1;
+      }
+    } finally {
+      await browser.close();
     }
 
     // Ensamblar ZIP en memoria
@@ -664,12 +677,13 @@ async function runGenerarZip(jobId, params) {
 // Iniciar generación (devuelve jobId inmediatamente)
 router.post('/generar', requireExportAccess, (req, res) => {
   const { desde, hasta } = req.body || {};
+  const authToken = req.cookies?.siche_token || '';
   const jobId = crypto.randomBytes(8).toString('hex');
   jobs.set(jobId, {
     status: 'pending', current: 0, total: 0,
     buf: null, error: null, createdAt: Date.now(),
   });
-  runGenerarZip(jobId, { desde, hasta }).catch(() => {});
+  runGenerarZip(jobId, { desde, hasta }, authToken).catch(() => {});
   res.json({ jobId });
 });
 

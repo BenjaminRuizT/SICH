@@ -36,6 +36,7 @@ export default function Configuracion() {
   const [exportUsers, setExportUsers] = useState([]);
   const [exportUsersLoading, setExportUsersLoading] = useState(false);
   const [savingExportUser, setSavingExportUser] = useState(null);
+  const [savingReopenUser, setSavingReopenUser] = useState(null);
 
   const loadPendientes = () => {
     setPendientesLoading(true);
@@ -144,6 +145,16 @@ export default function Configuracion() {
       setExportUsers(prev => prev.map(u => u.id === userId ? { ...u, can_export_responsivas: newVal } : u));
     } catch {}
     finally { setSavingExportUser(null); }
+  };
+
+  const toggleReopenUser = async (userId, current) => {
+    setSavingReopenUser(userId);
+    const newVal = !current;
+    try {
+      await axios.patch(`/api/usuarios/${userId}`, { can_reabrir_revision: newVal });
+      setExportUsers(prev => prev.map(u => u.id === userId ? { ...u, can_reabrir_revision: newVal } : u));
+    } catch {}
+    finally { setSavingReopenUser(null); }
   };
 
   const aplicarFirma = async () => {
@@ -417,6 +428,57 @@ export default function Configuracion() {
                       disabled={isSaving}
                       onClick={() => toggleExportUser(u.id, u.can_export_responsivas)}
                       title={active ? 'Quitar acceso' : 'Dar acceso'}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+                        active ? 'bg-brand-700' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        active ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {exportUsers.length === 0 && (
+              <p className="px-4 py-3 text-sm text-gray-400">Sin usuarios registrados.</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Permiso para eliminar registros */}
+      <div className="card space-y-3">
+        <h2 className="font-semibold text-gray-700">Corrección de registros</h2>
+        <p className="text-sm text-gray-500">
+          Usuarios autorizados para eliminar una revisión cerrada por error. El registro se elimina permanentemente y puede capturarse de nuevo. Los administradores siempre tienen este permiso.
+        </p>
+        {exportUsersLoading ? (
+          <p className="text-sm text-gray-400">Cargando usuarios...</p>
+        ) : (
+          <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 overflow-hidden">
+            {exportUsers.map(u => {
+              const isAdmin = u.rol === 'admin';
+              const active = isAdmin || u.can_reabrir_revision;
+              const isSaving = savingReopenUser === u.id;
+              return (
+                <div key={u.id} className="flex items-center justify-between px-4 py-3 bg-white">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm text-gray-900 truncate">{u.nombre}</p>
+                    <p className="text-xs text-gray-400">
+                      {u.username} · <span className={`font-semibold ${isAdmin ? 'text-brand-700' : 'text-gray-500'}`}>{isAdmin ? 'Admin' : 'Auditor'}</span>
+                    </p>
+                  </div>
+                  {isAdmin ? (
+                    <span className="text-xs text-brand-700 bg-brand-50 border border-brand-200 px-2.5 py-1 rounded-full font-semibold shrink-0">
+                      Siempre activo
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isSaving}
+                      onClick={() => toggleReopenUser(u.id, u.can_reabrir_revision)}
+                      title={active ? 'Quitar permiso' : 'Dar permiso'}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
                         active ? 'bg-brand-700' : 'bg-gray-300'
                       }`}

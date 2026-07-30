@@ -26,12 +26,18 @@ export default function Historial() {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('sich-historial-view') || 'lista');
   const [exportMsg, setExportMsg] = useState(null);
   const [canExportResponsivas, setCanExportResponsivas] = useState(false);
+  const [canReopenRevision, setCanReopenRevision] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // revision id to delete
+  const [deleting, setDeleting] = useState(false);
   const [zipJob, setZipJob] = useState(null); // { jobId, status, current, total }
   const pollRef = useRef(null);
 
   useEffect(() => {
     api.get('/admin/exportar-responsivas-roles')
       .then(r => setCanExportResponsivas(r.data.canExport === true))
+      .catch(() => {});
+    api.get('/admin/reabrir-revision-roles')
+      .then(r => setCanReopenRevision(r.data.canReabrir === true))
       .catch(() => {});
   }, [user]);
 
@@ -126,6 +132,19 @@ export default function Historial() {
   const verDetalle = async (id) => {
     const r = await api.get(`/revisiones/${id}`);
     setSelected(r.data);
+  };
+
+  const eliminarRevision = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/revisiones/${confirmDelete}`);
+      setConfirmDelete(null);
+      setSelected(null);
+      cargar();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al eliminar');
+    } finally { setDeleting(false); }
   };
 
   const fmtFecha = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -455,6 +474,27 @@ export default function Historial() {
               </div>
             )}
           </div>
+          {canReopenRevision && (
+            <div className="pt-3 border-t border-gray-100">
+              {confirmDelete === selected.id ? (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                  <p className="text-sm text-red-700 font-semibold">¿Eliminar este registro permanentemente?</p>
+                  <p className="text-xs text-red-600">Esta acción no se puede deshacer. El registro podrá capturarse nuevamente.</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1 text-sm py-1.5">Cancelar</button>
+                    <button onClick={eliminarRevision} disabled={deleting} className="flex-1 text-sm py-1.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
+                      {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDelete(selected.id)}
+                  className="text-xs text-red-600 hover:text-red-800 underline transition-colors">
+                  🗑 Eliminar este registro
+                </button>
+              )}
+            </div>
+          )}
         )}
       </Modal>
     </div>

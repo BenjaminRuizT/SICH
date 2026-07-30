@@ -21,8 +21,10 @@ export default function CartaResponsivaAuto() {
   const [rev, setRev] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hash, setHash] = useState('');
+  const [ciudadConfig, setCiudadConfig] = useState('');
 
   useEffect(() => {
+    api.get('/config').then(r => setCiudadConfig(r.data.ciudad_revision || '')).catch(() => {});
     api.get(`/revisiones/${id}`).then(async r => {
       const data = r.data;
       if (data.auto) {
@@ -163,7 +165,7 @@ export default function CartaResponsivaAuto() {
               <li>Se deberá establecer un programa de mantenimiento preventivo que asegure la operación cotidiana y alargue la vida útil de automóvil, será responsabilidad de "el empleado" que tiene asignado el automóvil el estado y conservación del mismo y sujetarse totalmente a lo que "la empresa" establezca.</li>
               <li>En caso de separarse "el empleado" del puesto que tenía asignado por cualquier motivo (promoción, renuncia, indemnización, etc.), Este deberá entregar el automóvil en perfectas condiciones de uso y operación a "la empresa" en la fecha de su separación.</li>
               <li>Manifiesta "el empleado" que el automóvil que le ha sido asignado es herramienta de trabajo y que no forma parte integrante de sus prestaciones, por lo que en este acto acepta que en ningún momento se deberá integrar a su salario.</li>
-              <li className="font-semibold">Ambas partes firman el presente convenio de conformidad en la ciudad de <u className="px-1">{blank(plaza)}</u> a <u className="px-1">{fmt(rev.fecha_revision)}</u></li>
+              <li className="font-semibold">Ambas partes firman el presente convenio de conformidad en la ciudad de <u className="px-1">{blank(ciudadConfig || plaza)}</u> a <u className="px-1">{fmt(rev.fecha_revision)}</u></li>
             </ol>
 
             {/* Datos del auto revisado */}
