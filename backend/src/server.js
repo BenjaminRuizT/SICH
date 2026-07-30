@@ -67,7 +67,7 @@ app.get('/api/config', requireAuth, async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
-app.get('/api/version', (req, res) => res.json({ version: '2.13.2' }));
+app.get('/api/version', (req, res) => res.json({ version: '2.13.3' }));
 
 // Verificación pública de documentos (sin auth) — rate limited para evitar enumeración
 const verificarLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
