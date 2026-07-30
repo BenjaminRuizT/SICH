@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import useInactivity from '../hooks/useInactivity';
-import useVersionCheck, { markReload } from '../hooks/useVersionCheck';
 import { APP_VERSION } from '../version';
 import MiFirmaModal from './MiFirmaModal';
 
@@ -198,37 +197,10 @@ export default function Layout({ children }) {
   }, []);
 
   useInactivity(async () => { await logout(); navigate('/login'); }, inactivityMs);
-  const updateState = useVersionCheck();
 
   return (
     <div className="min-h-screen flex flex-col">
       {showPwdModal && <CambiarPasswordModal onClose={() => setShowPwdModal(false)} onSuccess={async () => { await logout(); navigate('/login'); }} />}
-      {/* Update banner */}
-      {updateState === 'available' && (
-        <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
-          <span>🔄 Nueva versión disponible</span>
-          <button
-            onClick={async () => {
-              markReload();
-              try { await fetch('/api/force-refresh', { cache: 'no-store' }); } catch {}
-              window.location.href = '/?_=' + Date.now();
-            }}
-            className="bg-amber-900 text-amber-50 px-4 py-1 rounded-lg hover:bg-amber-800 transition-colors text-xs font-bold"
-          >
-            Actualizar ahora
-          </button>
-        </div>
-      )}
-      {updateState === 'pending' && (
-        <div className="bg-blue-100 text-blue-800 text-sm px-4 py-2 flex items-center gap-3 sticky top-0 z-50 shadow border-b border-blue-200">
-          <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-          </svg>
-          <span className="font-semibold">Actualizando la aplicación...</span>
-          <span className="text-xs text-blue-600">La nueva versión se cargará en unos momentos</span>
-        </div>
-      )}
       {/* Top bar */}
       <header className="bg-brand-900 text-white sticky top-0 z-40 shadow-lg">
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between">
