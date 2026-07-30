@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import useInactivity from '../hooks/useInactivity';
-import useVersionCheck from '../hooks/useVersionCheck';
+import useVersionCheck, { markReload } from '../hooks/useVersionCheck';
 import { APP_VERSION } from '../version';
 import MiFirmaModal from './MiFirmaModal';
 
@@ -208,7 +208,7 @@ export default function Layout({ children }) {
         <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
           <span>🔄 Nueva versión disponible</span>
           <button
-            onClick={() => window.location.replace('/?_=' + Date.now())}
+            onClick={() => { markReload(); window.location.replace('/?_=' + Date.now()); }}
             className="bg-amber-900 text-amber-50 px-4 py-1 rounded-lg hover:bg-amber-800 transition-colors text-xs font-bold"
           >
             Actualizar ahora

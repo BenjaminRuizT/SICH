@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { APP_VERSION } from '../version';
 
+const RELOAD_KEY = 'sich-reload-ts';
+const COOLDOWN_MS = 90_000; // 90s: tiempo para que Railway propague el nuevo build
+
 function parseVer(v) {
   return (v || '0.0.0').split('.').map(Number);
 }
 
-// Solo muestra el banner si el servidor tiene una versión MÁS NUEVA que el cliente.
-// Evita falsos positivos durante el deploy de Railway (backend aún en versión anterior).
 function isServerNewer(serverVersion) {
   const s = parseVer(serverVersion);
   const c = parseVer(APP_VERSION);
@@ -17,11 +18,21 @@ function isServerNewer(serverVersion) {
   return false;
 }
 
+function inCooldown() {
+  const ts = Number(localStorage.getItem(RELOAD_KEY) || 0);
+  return Date.now() - ts < COOLDOWN_MS;
+}
+
+export function markReload() {
+  localStorage.setItem(RELOAD_KEY, String(Date.now()));
+}
+
 export default function useVersionCheck() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
     const check = async () => {
+      if (inCooldown()) return;
       try {
         const r = await fetch('/api/version', { cache: 'no-store' });
         const { version } = await r.json();
