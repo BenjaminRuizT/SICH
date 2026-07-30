@@ -82,4 +82,37 @@ router.post('/import', requireAdmin, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Crear o encontrar empleado manualmente (auditores pueden usarlo cuando el empleado no está en el catálogo)
+router.post('/manual', requireAuth, async (req, res) => {
+  try {
+    const { nombre_completo, numero_empleado, posicion, departamento, plaza } = req.body;
+    if (!nombre_completo || !nombre_completo.trim()) return res.status(400).json({ error: 'nombre_completo requerido' });
+
+    let rows;
+    if (numero_empleado && numero_empleado.trim()) {
+      const r = await pool.query(
+        `INSERT INTO empleados(numero_empleado,nombre_completo,posicion,departamento,plaza,region)
+         VALUES($1,$2,$3,$4,$5,'Tijuana')
+         ON CONFLICT(numero_empleado) DO UPDATE SET
+           nombre_completo=EXCLUDED.nombre_completo,
+           posicion=COALESCE(NULLIF(EXCLUDED.posicion,''),empleados.posicion),
+           departamento=COALESCE(NULLIF(EXCLUDED.departamento,''),empleados.departamento),
+           plaza=COALESCE(NULLIF(EXCLUDED.plaza,''),empleados.plaza),
+           updated_at=NOW()
+         RETURNING *`,
+        [numero_empleado.trim(), nombre_completo.trim(), posicion || '', departamento || '', plaza || '']
+      );
+      rows = r.rows;
+    } else {
+      const r = await pool.query(
+        `INSERT INTO empleados(nombre_completo,posicion,departamento,plaza,region)
+         VALUES($1,$2,$3,$4,'Tijuana') RETURNING *`,
+        [nombre_completo.trim(), posicion || '', departamento || '', plaza || '']
+      );
+      rows = r.rows;
+    }
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: 'Error al registrar empleado' }); }
+});
+
 module.exports = router;

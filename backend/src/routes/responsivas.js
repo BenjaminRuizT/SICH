@@ -369,12 +369,8 @@ router.get('/auto', requireExportAccess, async (req, res) => {
     const { rows } = await pool.query(q, params);
     if (rows.length === 0) return res.status(404).json({ error: 'No hay revisiones con automovil en el rango indicado' });
 
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Auto_${new Date().toISOString().slice(0,10)}.zip"`);
-
-    const archive = archiver('zip', { zlib: { level: 6 } });
-    archive.pipe(res);
-
+    // Build all PDFs in memory first
+    const pdfs = [];
     for (const row of rows) {
       const rev = {
         id: row.id,
@@ -395,12 +391,26 @@ router.get('/auto', requireExportAccess, async (req, res) => {
         domicilio: row.domicilio, herramienta_snapshot: row.herramienta_snapshot || {},
       };
       const pdfBuf = await buildAutoPDF(rev, auto);
-      const emp = rev.empleado_snapshot;
-      const empName = safeFilename(emp.nombre_completo || '');
-      archive.append(pdfBuf, { name: `${empName}_${folio(rev.id)}.pdf` });
+      const empName = safeFilename((row.empleado_snapshot || {}).nombre_completo || '');
+      pdfs.push({ buf: pdfBuf, name: `${empName}_${folio(row.id)}.pdf` });
     }
 
-    await archive.finalize();
+    // Generate ZIP in memory
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    const zipChunks = [];
+    archive.on('data', c => zipChunks.push(c));
+    await new Promise((resolve, reject) => {
+      archive.on('end', resolve);
+      archive.on('error', reject);
+      for (const { buf, name } of pdfs) archive.append(buf, { name });
+      archive.finalize();
+    });
+    const zipBuf = Buffer.concat(zipChunks);
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Auto_${new Date().toISOString().slice(0,10)}.zip"`);
+    res.setHeader('Content-Length', zipBuf.length);
+    res.send(zipBuf);
   } catch (e) {
     console.error('Error exportar responsivas auto:', e);
     if (!res.headersSent) res.status(500).json({ error: 'Error al generar archivo' });
@@ -427,12 +437,8 @@ router.get('/equipo', requireExportAccess, async (req, res) => {
     const { rows } = await pool.query(q, params);
     if (rows.length === 0) return res.status(404).json({ error: 'No hay revisiones con equipo en el rango indicado' });
 
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Equipo_${new Date().toISOString().slice(0,10)}.zip"`);
-
-    const archive = archiver('zip', { zlib: { level: 6 } });
-    archive.pipe(res);
-
+    // Build all PDFs in memory first
+    const pdfs = [];
     for (const row of rows) {
       const rev = {
         id: row.id,
@@ -449,12 +455,26 @@ router.get('/equipo', requireExportAccess, async (req, res) => {
         herramienta_snapshot: row.herramienta_snapshot || {},
       };
       const pdfBuf = await buildEquipoPDF(rev, equipo);
-      const emp = rev.empleado_snapshot;
-      const empName = safeFilename(emp.nombre_completo || '');
-      archive.append(pdfBuf, { name: `${empName}_${folio(rev.id)}.pdf` });
+      const empName = safeFilename((row.empleado_snapshot || {}).nombre_completo || '');
+      pdfs.push({ buf: pdfBuf, name: `${empName}_${folio(row.id)}.pdf` });
     }
 
-    await archive.finalize();
+    // Generate ZIP in memory
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    const zipChunks = [];
+    archive.on('data', c => zipChunks.push(c));
+    await new Promise((resolve, reject) => {
+      archive.on('end', resolve);
+      archive.on('error', reject);
+      for (const { buf, name } of pdfs) archive.append(buf, { name });
+      archive.finalize();
+    });
+    const zipBuf = Buffer.concat(zipChunks);
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Equipo_${new Date().toISOString().slice(0,10)}.zip"`);
+    res.setHeader('Content-Length', zipBuf.length);
+    res.send(zipBuf);
   } catch (e) {
     console.error('Error exportar responsivas equipo:', e);
     if (!res.headersSent) res.status(500).json({ error: 'Error al generar archivo' });

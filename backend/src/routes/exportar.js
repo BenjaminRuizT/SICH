@@ -1,9 +1,20 @@
 const router = require('express').Router();
 const ExcelJS = require('exceljs');
 const pool = require('../db');
-const { requireAdmin } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 
-router.get('/revisiones', requireAdmin, async (req, res) => {
+async function requireExportOrAdmin(req, res, next) {
+  requireAuth(req, res, async () => {
+    if (req.user.rol === 'admin') return next();
+    try {
+      const { rows: [u] } = await pool.query('SELECT can_export_responsivas FROM app_users WHERE id=$1', [req.user.id]);
+      if (u?.can_export_responsivas === true) return next();
+      return res.status(403).json({ error: 'Sin acceso para exportar' });
+    } catch { return res.status(500).json({ error: 'Error interno del servidor' }); }
+  });
+}
+
+router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
   try {
     const { desde, hasta } = req.query;
     let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.status,

@@ -127,7 +127,7 @@ export default function Historial() {
             ))}
           </div>
           {/* Export buttons */}
-          {isAdmin && (
+          {(isAdmin || canExportResponsivas) && (
             <button onClick={exportarExcel}
               className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
               📥 Excel

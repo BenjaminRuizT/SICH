@@ -169,6 +169,10 @@ export default function NuevaRevision() {
   const [catalog, setCatalog] = useState({ marcas: [], modelos: [] });
   const [confirmReset, setConfirmReset] = useState(false);
   const [auditorFirma, setAuditorFirma] = useState(null);
+  const [modoManual, setModoManual] = useState(false);
+  const [manualForm, setManualForm] = useState({ nombre_completo: '', numero_empleado: '', posicion: '', departamento: '', plaza: '' });
+  const [manualError, setManualError] = useState('');
+  const [manualLoading, setManualLoading] = useState(false);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -209,6 +213,21 @@ export default function NuevaRevision() {
     const r = await api.get(`/empleados/search?q=${encodeURIComponent(q)}`).catch(() => ({ data: [] }));
     setResultados(r.data);
   }, []);
+
+  const seleccionarManual = async (e) => {
+    e.preventDefault();
+    setManualError('');
+    if (!manualForm.nombre_completo.trim()) { setManualError('El nombre es requerido'); return; }
+    setManualLoading(true);
+    try {
+      const r = await api.post('/empleados/manual', manualForm);
+      setModoManual(false);
+      setManualForm({ nombre_completo: '', numero_empleado: '', posicion: '', departamento: '', plaza: '' });
+      seleccionar(r.data);
+    } catch (err) {
+      setManualError(err.response?.data?.error || 'Error al registrar el empleado');
+    } finally { setManualLoading(false); }
+  };
 
   const seleccionar = async (emp) => {
     setEmpleado(emp);
@@ -316,6 +335,7 @@ export default function NuevaRevision() {
     setPaso(0);
     setQuery('');
     setResultados([]);
+    setModoManual(false);
     setEmpleado(null);
     setEditEmpleado({});
     setHerramientas([]);
@@ -440,8 +460,56 @@ export default function NuevaRevision() {
               ))}
             </div>
           )}
-          {query.length >= 2 && resultados.length === 0 && (
-            <p className="text-center text-gray-400 py-6">Sin resultados para "{query}"</p>
+          {query.length >= 2 && resultados.length === 0 && !modoManual && (
+            <div className="space-y-3">
+              <p className="text-center text-gray-400 py-4">Sin resultados para "{query}"</p>
+              <button type="button" onClick={() => { setModoManual(true); setManualForm(f => ({ ...f, nombre_completo: query })); }}
+                className="w-full border-2 border-dashed border-brand-300 text-brand-700 hover:border-brand-500 hover:bg-brand-50 rounded-xl py-3 text-sm font-semibold transition-colors">
+                ✏️ Capturar datos manualmente
+              </button>
+            </div>
+          )}
+          {modoManual && (
+            <div className="card space-y-3 border-brand-200">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-gray-800 text-sm">Captura manual de empleado</p>
+                <button type="button" onClick={() => setModoManual(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
+              </div>
+              <form onSubmit={seleccionarManual} className="space-y-3">
+                <div>
+                  <label className="label">Nombre completo<span className="text-red-500 ml-1">*</span></label>
+                  <input className="input" value={manualForm.nombre_completo}
+                    onChange={e => setManualForm(f => ({ ...f, nombre_completo: e.target.value }))} required />
+                </div>
+                <div>
+                  <label className="label">Número de empleado <span className="text-gray-400 font-normal text-xs">(opcional)</span></label>
+                  <input className="input" value={manualForm.numero_empleado}
+                    onChange={e => setManualForm(f => ({ ...f, numero_empleado: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Posición</label>
+                  <input className="input" value={manualForm.posicion}
+                    onChange={e => setManualForm(f => ({ ...f, posicion: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Departamento</label>
+                  <input className="input" value={manualForm.departamento}
+                    onChange={e => setManualForm(f => ({ ...f, departamento: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Plaza</label>
+                  <select className="input" value={manualForm.plaza}
+                    onChange={e => setManualForm(f => ({ ...f, plaza: e.target.value }))}>
+                    <option value="">Seleccionar...</option>
+                    {(config.plazas || []).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                {manualError && <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">{manualError}</p>}
+                <button type="submit" disabled={manualLoading} className="btn-primary w-full">
+                  {manualLoading ? 'Registrando...' : 'Continuar con este empleado'}
+                </button>
+              </form>
+            </div>
           )}
         </div>
       )}
@@ -682,7 +750,7 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
               onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            {auditorFirma && autoForm.firma_auditor === auditorFirma && (
+            {auditorFirma ? (
               <div className="space-y-1">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
@@ -691,10 +759,9 @@ export default function NuevaRevision() {
                 </div>
                 <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
                 <SignatureCanvas label="" signerName={nombreAuditor}
-                  onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
+                  onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
               </div>
-            )}
-            {!(auditorFirma && autoForm.firma_auditor === auditorFirma) && (
+            ) : (
               <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
                 onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v }))} />
             )}
@@ -785,7 +852,7 @@ export default function NuevaRevision() {
             <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
-            {auditorFirma && equipoForm.firma_auditor === auditorFirma && (
+            {auditorFirma ? (
               <div className="space-y-1">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
@@ -794,10 +861,9 @@ export default function NuevaRevision() {
                 </div>
                 <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
                 <SignatureCanvas label="" signerName={nombreAuditor}
-                  onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
+                  onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
               </div>
-            )}
-            {!(auditorFirma && equipoForm.firma_auditor === auditorFirma) && (
+            ) : (
               <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
                 onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v }))} />
             )}
