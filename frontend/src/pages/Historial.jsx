@@ -24,8 +24,7 @@ export default function Historial() {
   const [loading, setLoading] = useState(false);
   const [successBanner, setSuccessBanner] = useState(location.state?.success);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('sich-historial-view') || 'lista');
-  const [exportingAuto, setExportingAuto] = useState(false);
-  const [exportingEquipo, setExportingEquipo] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
   const [exportMsg, setExportMsg] = useState(null);
   const [canExportResponsivas, setCanExportResponsivas] = useState(false);
 
@@ -71,18 +70,17 @@ export default function Historial() {
     } catch { alert('Error al exportar Excel. Intenta de nuevo.'); }
   };
 
-  const exportarResponsivasZip = async (tipo) => {
-    const setter = tipo === 'auto' ? setExportingAuto : setExportingEquipo;
-    setter(true); setExportMsg(null);
+  const exportarZip = async () => {
+    setExportingZip(true); setExportMsg(null);
     try {
       const params = new URLSearchParams();
       if (desde) params.set('desde', desde);
       if (hasta) params.set('hasta', hasta);
-      const r = await api.get(`/responsivas/${tipo}?${params}`, { responseType: 'blob' });
+      const r = await api.get(`/responsivas/completo?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(r.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `SICHE_Responsivas_${tipo === 'auto' ? 'Auto' : 'Equipo'}_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `SICHE_Revisiones_${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -90,7 +88,7 @@ export default function Historial() {
         ? 'Sin revisiones en el rango indicado.'
         : 'Error al generar el archivo. Intenta de nuevo.';
       setExportMsg(msg);
-    } finally { setter(false); }
+    } finally { setExportingZip(false); }
   };
 
   const verDetalle = async (id) => {
@@ -134,16 +132,10 @@ export default function Historial() {
             </button>
           )}
           {canExportResponsivas && (
-            <>
-              <button onClick={() => exportarResponsivasZip('auto')} disabled={exportingAuto}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                {exportingAuto ? '...' : '🚗 ZIP Auto'}
-              </button>
-              <button onClick={() => exportarResponsivasZip('equipo')} disabled={exportingEquipo}
-                className="bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-                {exportingEquipo ? '...' : '💻 ZIP Equipo'}
-              </button>
-            </>
+            <button onClick={exportarZip} disabled={exportingZip}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
+              {exportingZip ? 'Generando...' : '📁 Exportar ZIP'}
+            </button>
           )}
         </div>
       </div>

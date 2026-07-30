@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const pool = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { decrypt } = require('../utils/crypto');
+const { decrypt, decryptArr } = require('../utils/crypto');
 
 function requireExportAccess(req, res, next) {
   requireAuth(req, res, async () => {
@@ -52,6 +52,19 @@ function folio(id) {
   return 'SICH-' + String(id).padStart(6, '0');
 }
 
+function safeFilename(name) {
+  return (name || 'Empleado').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_').slice(0, 60);
+}
+
+function dataUrlToBuffer(dataUrl) {
+  if (!dataUrl) return null;
+  try {
+    const b64 = dataUrl.replace(/^data:image\/[a-z+]+;base64,/, '');
+    return Buffer.from(b64, 'base64');
+  } catch { return null; }
+}
+
 // Try to load OXXO logo once at startup
 let oxxoLogoBuffer = null;
 try {
@@ -78,7 +91,6 @@ function buildAutoPDF(rev, auto) {
     const COL1 = 50, COL2 = 220, COL3 = 390;
     const SIGW = 140, SIGH = 55;
 
-    // ── Header ──────────────────────────────────────────────────────────────
     const headerY = doc.y;
     if (oxxoLogoBuffer) {
       doc.image(oxxoLogoBuffer, COL1, headerY, { width: 60, height: 30 });
@@ -95,12 +107,10 @@ function buildAutoPDF(rev, auto) {
     doc.strokeColor('black');
     doc.moveDown(0.4);
 
-    // ── Fecha ────────────────────────────────────────────────────────────────
     doc.font('Helvetica').fontSize(9)
       .text(`${ciudad ? ciudad + ', a ' : ''}${fmtDate(rev.fecha_revision)}`, { align: 'right' });
     doc.moveDown(0.4);
 
-    // ── Cuerpo ───────────────────────────────────────────────────────────────
     const modelo = auto.no_modelo || snap.modelo || '—';
     doc.font('Helvetica').fontSize(10).text(
       `Hace constar que el empleado `, { continued: true }
@@ -111,13 +121,12 @@ function buildAutoPDF(rev, auto) {
       { align: 'justify' });
     doc.moveDown(0.5);
 
-    // ── Datos del vehículo ───────────────────────────────────────────────────
     const dataItems = [
       ['Modelo', modelo],
       ['Placas', auto.placas || '—'],
       ['No. de Serie', auto.no_serie || snap.serie || '—'],
       ['Kilometraje', auto.kilometraje != null ? `${auto.kilometraje} km` : '—'],
-      ['Código de barras', auto.codigo_barras || snap.codigo_barras || '—'],
+      ['Codigo de barras', auto.codigo_barras || snap.codigo_barras || '—'],
       ['Domicilio del empleado', auto.domicilio || '—'],
     ];
 
@@ -131,8 +140,7 @@ function buildAutoPDF(rev, auto) {
     doc.y = dtY + dataItems.length * 16 + 16;
     doc.moveDown(0.4);
 
-    // ── Checklist ────────────────────────────────────────────────────────────
-    doc.font('Helvetica-Bold').fontSize(9).text('Verificación de accesorios:');
+    doc.font('Helvetica-Bold').fontSize(9).text('Verificacion de accesorios:');
     doc.moveDown(0.2);
 
     const checks = [
@@ -154,14 +162,13 @@ function buildAutoPDF(rev, auto) {
     });
     doc.y = chkY + Math.ceil(checks.length / 2) * 15 + 6;
 
-    // ── Daños ────────────────────────────────────────────────────────────────
     const danos = Array.isArray(auto.danos) ? auto.danos : [];
     if (danos.length > 0) {
       doc.moveDown(0.3);
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#92400e').text('Danos / desperfectos registrados:');
       danos.forEach(d => {
         doc.font('Helvetica').fontSize(8).fillColor('#78350f')
-          .text(`  • ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
+          .text(`  - ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
       });
       doc.fillColor('black');
     }
@@ -173,7 +180,6 @@ function buildAutoPDF(rev, auto) {
       doc.fillColor('black');
     }
 
-    // ── Firmas ───────────────────────────────────────────────────────────────
     doc.moveDown(1.2);
     const sigLabelY = doc.y;
     doc.font('Helvetica-Bold').fontSize(9);
@@ -203,7 +209,6 @@ function buildAutoPDF(rev, auto) {
     doc.text(nombreEmp, COL2, nameY + 11, { width: SIGW, align: 'center' });
     if (rev.auditor_nombre) doc.text(rev.auditor_nombre, COL3, nameY + 11, { width: SIGW, align: 'center' });
 
-    // ── Pie ──────────────────────────────────────────────────────────────────
     const footY = nameY + 30;
     doc.moveTo(COL1, footY).lineTo(545, footY).strokeColor('#d1d5db').stroke();
     doc.strokeColor('black');
@@ -233,7 +238,6 @@ function buildEquipoPDF(rev, equipo) {
     const COL1 = 50, COL2 = 220, COL3 = 390;
     const SIGW = 140, SIGH = 55;
 
-    // ── Header ───────────────────────────────────────────────────────────────
     const headerY = doc.y;
     if (oxxoLogoBuffer) {
       doc.image(oxxoLogoBuffer, COL1, headerY, { width: 60, height: 30 });
@@ -250,12 +254,10 @@ function buildEquipoPDF(rev, equipo) {
     doc.strokeColor('black');
     doc.moveDown(0.4);
 
-    // ── Fecha ────────────────────────────────────────────────────────────────
     doc.font('Helvetica').fontSize(9)
       .text(`${ciudad ? ciudad + ', a ' : ''}${fmtDate(rev.fecha_revision)}`, { align: 'right' });
     doc.moveDown(0.5);
 
-    // ── Cuerpo ───────────────────────────────────────────────────────────────
     const marca = equipo.marca || snap.marca || '—';
     const modelo = equipo.modelo || snap.modelo || '—';
     const desc = [marca, modelo].filter(Boolean).join(' ');
@@ -265,7 +267,6 @@ function buildEquipoPDF(rev, equipo) {
       .font('Helvetica').text(`, al servicio de CADENA COMERCIAL OXXO, S.A. DE C.V.`, { align: 'justify' });
     doc.moveDown(0.5);
 
-    // ── Datos del equipo ─────────────────────────────────────────────────────
     const dataItems = [
       ['No. Activo (CB)', equipo.codigo_barras || snap.codigo_barras || '—'],
       ['Marca', marca],
@@ -282,14 +283,13 @@ function buildEquipoPDF(rev, equipo) {
     });
     doc.y = dtY + dataItems.length * 16 + 16;
 
-    // ── Daños ────────────────────────────────────────────────────────────────
     const danos = Array.isArray(equipo.danos) ? equipo.danos : [];
     if (danos.length > 0) {
       doc.moveDown(0.3);
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#92400e').text('Danos / desperfectos registrados:');
       danos.forEach(d => {
         doc.font('Helvetica').fontSize(8).fillColor('#78350f')
-          .text(`  • ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
+          .text(`  - ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
       });
       doc.fillColor('black');
     }
@@ -300,7 +300,6 @@ function buildEquipoPDF(rev, equipo) {
       doc.fillColor('black');
     }
 
-    // ── Firmas ───────────────────────────────────────────────────────────────
     doc.moveDown(1.5);
     const sigLabelY = doc.y;
     doc.font('Helvetica-Bold').fontSize(9);
@@ -341,58 +340,248 @@ function buildEquipoPDF(rev, equipo) {
   });
 }
 
-// Sanitize employee name for filename
-function safeFilename(name) {
-  return (name || 'Empleado').normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z0-9 _-]/g, '').replace(/\s+/g, '_').slice(0, 60);
+function buildResumenPDF(rev, rawAuto, rawEquipo) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Resumen - ${folio(rev.id)}` } });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const emp = rev.empleado_snapshot || {};
+    const ciudad = rev._ciudad || '';
+    const COL1 = 50;
+
+    // Header
+    const headerY = doc.y;
+    if (oxxoLogoBuffer) {
+      doc.image(oxxoLogoBuffer, COL1, headerY, { width: 60, height: 30 });
+    } else {
+      doc.font('Helvetica-Bold').fontSize(14).fillColor('#e8540c').text('OXXO', COL1, headerY);
+      doc.fillColor('black');
+    }
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('black')
+      .text('HOJA DE RESUMEN DE AUDITORIA', COL1 + 80, headerY + 2, { width: 360, align: 'center' });
+    doc.font('Helvetica').fontSize(8).fillColor('#4b5563')
+      .text(`Folio: ${folio(rev.id)}`, COL1 + 80, headerY + 16, { width: 360, align: 'center' });
+    doc.fillColor('black');
+
+    doc.y = headerY + 38;
+    doc.moveTo(COL1, doc.y).lineTo(545, doc.y).strokeColor('#888').stroke();
+    doc.strokeColor('black');
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica').fontSize(9)
+      .text(`${ciudad ? ciudad + ', ' : ''}${fmtDate(rev.fecha_revision)}`, { align: 'right' });
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(9).text('Auditor: ', { continued: true })
+      .font('Helvetica-Bold').text(rev.auditor_nombre || '—');
+    doc.moveDown(0.6);
+
+    // Employee section
+    doc.font('Helvetica-Bold').fontSize(9).fillColor('#134e4a').text('DATOS DEL EMPLEADO');
+    doc.fillColor('black');
+    doc.moveDown(0.2);
+    [
+      ['Nombre', emp.nombre_completo || '—'],
+      ['No. Empleado', emp.numero_empleado || '—'],
+      ['Puesto', emp.posicion || '—'],
+      ['Departamento', emp.departamento || '—'],
+      ['Plaza', emp.plaza || '—'],
+    ].forEach(([label, val]) => {
+      doc.font('Helvetica-Bold').fontSize(8.5).text(`${label}: `, { continued: true });
+      doc.font('Helvetica').text(val);
+    });
+
+    // Auto section
+    if (rawAuto) {
+      doc.moveDown(0.6);
+      doc.moveTo(COL1, doc.y).lineTo(545, doc.y).strokeColor('#bfdbfe').stroke();
+      doc.strokeColor('black');
+      doc.moveDown(0.4);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#1e40af').text('AUTOMOVIL');
+      doc.fillColor('black');
+      doc.moveDown(0.2);
+
+      const licVal = rawAuto.licencia_numero
+        ? (rawAuto.licencia_numero === 'true' ? 'Si' : rawAuto.licencia_numero)
+        : '—';
+
+      [
+        ['Modelo', rawAuto.no_modelo || '—'],
+        ['Placas', rawAuto.placas || '—'],
+        ['No. Serie', rawAuto.no_serie || '—'],
+        ['Kilometraje', rawAuto.kilometraje != null ? `${rawAuto.kilometraje} km` : '—'],
+        ['Poliza de seguro', boolStr(rawAuto.poliza_seguro)],
+        ['Licencia de conducir', licVal],
+        ['Llanta de refaccion', boolStr(rawAuto.llanta_refaccion)],
+        ['Gato / Cruceta', boolStr(rawAuto.gato_cruceta)],
+        ['Tarjeta de circulacion', boolStr(rawAuto.tarjeta_circulacion)],
+      ].forEach(([label, val]) => {
+        doc.font('Helvetica-Bold').fontSize(8.5).text(`${label}: `, { continued: true });
+        doc.font('Helvetica').text(val);
+      });
+
+      const autoDanos = Array.isArray(rawAuto.danos) ? rawAuto.danos : [];
+      if (autoDanos.length > 0) {
+        doc.moveDown(0.2);
+        doc.font('Helvetica-Bold').fontSize(8).fillColor('#92400e').text('Danos:');
+        autoDanos.forEach(d => {
+          doc.font('Helvetica').fontSize(7.5).fillColor('#78350f')
+            .text(`  - ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
+        });
+        doc.fillColor('black');
+      }
+      if (rawAuto.comentarios) {
+        doc.moveDown(0.2);
+        doc.font('Helvetica').fontSize(8).fillColor('#374151').text(`Comentarios: ${rawAuto.comentarios}`);
+        doc.fillColor('black');
+      }
+    }
+
+    // Equipo section
+    if (rawEquipo) {
+      doc.moveDown(0.6);
+      doc.moveTo(COL1, doc.y).lineTo(545, doc.y).strokeColor('#ddd6fe').stroke();
+      doc.strokeColor('black');
+      doc.moveDown(0.4);
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#6d28d9').text('EQUIPO DE COMPUTO');
+      doc.fillColor('black');
+      doc.moveDown(0.2);
+
+      [
+        ['No. Activo (CB)', rawEquipo.codigo_barras || '—'],
+        ['Marca', rawEquipo.marca || '—'],
+        ['Modelo', rawEquipo.modelo || '—'],
+        ['No. Serie', rawEquipo.serie || '—'],
+      ].forEach(([label, val]) => {
+        doc.font('Helvetica-Bold').fontSize(8.5).text(`${label}: `, { continued: true });
+        doc.font('Helvetica').text(val);
+      });
+
+      const equipoDanos = Array.isArray(rawEquipo.danos) ? rawEquipo.danos : [];
+      if (equipoDanos.length > 0) {
+        doc.moveDown(0.2);
+        doc.font('Helvetica-Bold').fontSize(8).fillColor('#92400e').text('Danos:');
+        equipoDanos.forEach(d => {
+          doc.font('Helvetica').fontSize(7.5).fillColor('#78350f')
+            .text(`  - ${d.label}${d.observacion ? ': ' + d.observacion : ''}`);
+        });
+        doc.fillColor('black');
+      }
+      if (rawEquipo.comentarios) {
+        doc.moveDown(0.2);
+        doc.font('Helvetica').fontSize(8).fillColor('#374151').text(`Comentarios: ${rawEquipo.comentarios}`);
+        doc.fillColor('black');
+      }
+    }
+
+    // Footer
+    doc.moveDown(0.8);
+    doc.moveTo(COL1, doc.y).lineTo(545, doc.y).strokeColor('#d1d5db').stroke();
+    doc.strokeColor('black');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(7).fillColor('#6b7280')
+      .text(`Folio: ${folio(rev.id)}  |  Revision: ${fmtFull(rev.fecha_revision)}  |  Auditor: ${rev.auditor_nombre || '—'}`, COL1, doc.y, { align: 'center', width: 495 });
+    doc.text('Sistema de Control de Herramienta — Cadena Comercial OXXO, S.A. DE C.V.', { align: 'center', width: 495 });
+
+    doc.end();
+  });
 }
 
-router.get('/auto', requireExportAccess, async (req, res) => {
+// Único endpoint: carpeta por revisión con resumen + cartas responsivas + fotos
+router.get('/completo', requireExportAccess, async (req, res) => {
   try {
     const { desde, hasta } = req.query;
-    let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.empleado_snapshot, r.tiene_auto,
-              ra.no_modelo, ra.no_serie, ra.placas, ra.codigo_barras, ra.kilometraje,
-              ra.poliza_seguro, ra.licencia_numero, ra.llanta_refaccion, ra.gato_cruceta,
-              ra.tarjeta_circulacion, ra.comentarios, ra.danos,
-              ra.firma_empleado, ra.firma_auditor, ra.firma_responsable_rh, ra.nombre_responsable_rh,
-              ra.domicilio, ra.herramienta_snapshot,
-              cfg.value as ciudad
+    let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.empleado_snapshot,
+              r.tiene_auto, r.tiene_equipo,
+              cfg.value AS ciudad
              FROM revisiones r
-             JOIN revision_auto ra ON ra.revision_id = r.id
              LEFT JOIN app_config cfg ON cfg.key = 'ciudad_revision'
-             WHERE r.tiene_auto = true`;
+             WHERE 1=1`;
     const params = [];
     if (desde) { params.push(desde); q += ` AND r.fecha_revision >= $${params.length}`; }
     if (hasta) { params.push(hasta); q += ` AND r.fecha_revision <= $${params.length}`; }
     q += ' ORDER BY r.fecha_revision DESC';
 
-    const { rows } = await pool.query(q, params);
-    if (rows.length === 0) return res.status(404).json({ error: 'No hay revisiones con automovil en el rango indicado' });
+    const { rows: revs } = await pool.query(q, params);
+    if (revs.length === 0) return res.status(404).json({ error: 'No hay revisiones en el rango indicado' });
 
-    // Build all PDFs in memory first
-    const pdfs = [];
-    for (const row of rows) {
-      const rev = {
-        id: row.id,
-        fecha_revision: row.fecha_revision,
-        auditor_nombre: row.auditor_nombre,
-        empleado_snapshot: row.empleado_snapshot || {},
-        _ciudad: row.ciudad || '',
+    const revIds = revs.map(r => r.id);
+    const [{ rows: autoRows }, { rows: equipoRows }] = await Promise.all([
+      pool.query('SELECT * FROM revision_auto WHERE revision_id = ANY($1)', [revIds]),
+      pool.query('SELECT * FROM revision_equipo WHERE revision_id = ANY($1)', [revIds]),
+    ]);
+
+    const autoByRevId = {};
+    for (const a of autoRows) autoByRevId[a.revision_id] = a;
+    const equipoByRevId = {};
+    for (const e of equipoRows) equipoByRevId[e.revision_id] = e;
+
+    // Build all content in memory before assembling ZIP
+    const entries = [];
+
+    for (const rev of revs) {
+      const emp = rev.empleado_snapshot || {};
+      const empName = safeFilename(emp.nombre_completo || '');
+      const folioStr = folio(rev.id);
+      const folder = `${empName}_${folioStr}`;
+
+      const revObj = {
+        id: rev.id,
+        fecha_revision: rev.fecha_revision,
+        auditor_nombre: rev.auditor_nombre,
+        empleado_snapshot: emp,
+        _ciudad: rev.ciudad || '',
       };
-      const auto = {
-        no_modelo: row.no_modelo, no_serie: row.no_serie, placas: row.placas,
-        codigo_barras: row.codigo_barras, kilometraje: row.kilometraje,
-        poliza_seguro: row.poliza_seguro, licencia_numero: row.licencia_numero,
-        llanta_refaccion: row.llanta_refaccion, gato_cruceta: row.gato_cruceta,
-        tarjeta_circulacion: row.tarjeta_circulacion,
-        comentarios: row.comentarios, danos: row.danos || [],
-        firma_empleado: row.firma_empleado, firma_auditor: row.firma_auditor,
-        firma_responsable_rh: row.firma_responsable_rh, nombre_responsable_rh: row.nombre_responsable_rh,
-        domicilio: row.domicilio, herramienta_snapshot: row.herramienta_snapshot || {},
-      };
-      const pdfBuf = await buildAutoPDF(rev, auto);
-      const empName = safeFilename((row.empleado_snapshot || {}).nombre_completo || '');
-      pdfs.push({ buf: pdfBuf, name: `${empName}_${folio(row.id)}.pdf` });
+
+      const rawAuto = autoByRevId[rev.id] || null;
+      const rawEquipo = equipoByRevId[rev.id] || null;
+
+      // Resumen PDF
+      const resumenBuf = await buildResumenPDF(revObj, rawAuto, rawEquipo);
+      entries.push({ path: `${folder}/Resumen.pdf`, buf: resumenBuf });
+
+      // Carta auto + fotos
+      if (rawAuto) {
+        const autoBuf = await buildAutoPDF(revObj, rawAuto);
+        entries.push({ path: `${folder}/Carta_Auto.pdf`, buf: autoBuf });
+
+        // Fotos condiciones (array)
+        const condFotos = decryptArr(rawAuto.foto_condiciones || []);
+        condFotos.forEach((f, i) => {
+          const buf = dataUrlToBuffer(f);
+          if (buf) entries.push({ path: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
+        });
+
+        // Fotos individuales
+        const autoPhotos = [
+          ['foto_licencia.jpg', rawAuto.foto_licencia],
+          ['foto_licencia_reverso.jpg', rawAuto.foto_licencia_reverso],
+          ['foto_tarjeta_circulacion.jpg', rawAuto.foto_tarjeta_circulacion],
+          ['foto_poliza_seguro.jpg', rawAuto.foto_poliza_seguro],
+          ['foto_llanta_refaccion.jpg', rawAuto.foto_llanta_refaccion],
+        ];
+        for (const [name, enc] of autoPhotos) {
+          const decrypted = dec(enc);
+          if (decrypted) {
+            const buf = dataUrlToBuffer(decrypted);
+            if (buf) entries.push({ path: `${folder}/${name}`, buf });
+          }
+        }
+      }
+
+      // Carta equipo + foto
+      if (rawEquipo) {
+        const equipoBuf = await buildEquipoPDF(revObj, rawEquipo);
+        entries.push({ path: `${folder}/Carta_Equipo.pdf`, buf: equipoBuf });
+
+        const fotoEquipo = dec(rawEquipo.foto_equipo);
+        if (fotoEquipo) {
+          const buf = dataUrlToBuffer(fotoEquipo);
+          if (buf) entries.push({ path: `${folder}/foto_equipo.jpg`, buf });
+        }
+      }
     }
 
     // Generate ZIP in memory
@@ -402,81 +591,18 @@ router.get('/auto', requireExportAccess, async (req, res) => {
     await new Promise((resolve, reject) => {
       archive.on('end', resolve);
       archive.on('error', reject);
-      for (const { buf, name } of pdfs) archive.append(buf, { name });
+      for (const { path: p, buf } of entries) archive.append(buf, { name: p });
       archive.finalize();
     });
     const zipBuf = Buffer.concat(zipChunks);
 
+    const fecha = new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Auto_${new Date().toISOString().slice(0,10)}.zip"`);
+    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Revisiones_${fecha}.zip"`);
     res.setHeader('Content-Length', zipBuf.length);
     res.send(zipBuf);
   } catch (e) {
-    console.error('Error exportar responsivas auto:', e);
-    if (!res.headersSent) res.status(500).json({ error: 'Error al generar archivo' });
-  }
-});
-
-router.get('/equipo', requireExportAccess, async (req, res) => {
-  try {
-    const { desde, hasta } = req.query;
-    let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.empleado_snapshot, r.tiene_equipo,
-              re.codigo_barras, re.marca, re.modelo, re.serie, re.comentarios, re.danos,
-              re.firma_empleado, re.firma_auditor, re.firma_responsable_rh, re.nombre_responsable_rh,
-              re.herramienta_snapshot,
-              cfg.value as ciudad
-             FROM revisiones r
-             JOIN revision_equipo re ON re.revision_id = r.id
-             LEFT JOIN app_config cfg ON cfg.key = 'ciudad_revision'
-             WHERE r.tiene_equipo = true`;
-    const params = [];
-    if (desde) { params.push(desde); q += ` AND r.fecha_revision >= $${params.length}`; }
-    if (hasta) { params.push(hasta); q += ` AND r.fecha_revision <= $${params.length}`; }
-    q += ' ORDER BY r.fecha_revision DESC';
-
-    const { rows } = await pool.query(q, params);
-    if (rows.length === 0) return res.status(404).json({ error: 'No hay revisiones con equipo en el rango indicado' });
-
-    // Build all PDFs in memory first
-    const pdfs = [];
-    for (const row of rows) {
-      const rev = {
-        id: row.id,
-        fecha_revision: row.fecha_revision,
-        auditor_nombre: row.auditor_nombre,
-        empleado_snapshot: row.empleado_snapshot || {},
-        _ciudad: row.ciudad || '',
-      };
-      const equipo = {
-        codigo_barras: row.codigo_barras, marca: row.marca, modelo: row.modelo, serie: row.serie,
-        comentarios: row.comentarios, danos: row.danos || [],
-        firma_empleado: row.firma_empleado, firma_auditor: row.firma_auditor,
-        firma_responsable_rh: row.firma_responsable_rh, nombre_responsable_rh: row.nombre_responsable_rh,
-        herramienta_snapshot: row.herramienta_snapshot || {},
-      };
-      const pdfBuf = await buildEquipoPDF(rev, equipo);
-      const empName = safeFilename((row.empleado_snapshot || {}).nombre_completo || '');
-      pdfs.push({ buf: pdfBuf, name: `${empName}_${folio(row.id)}.pdf` });
-    }
-
-    // Generate ZIP in memory
-    const archive = archiver('zip', { zlib: { level: 6 } });
-    const zipChunks = [];
-    archive.on('data', c => zipChunks.push(c));
-    await new Promise((resolve, reject) => {
-      archive.on('end', resolve);
-      archive.on('error', reject);
-      for (const { buf, name } of pdfs) archive.append(buf, { name });
-      archive.finalize();
-    });
-    const zipBuf = Buffer.concat(zipChunks);
-
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="SICHE_Responsivas_Equipo_${new Date().toISOString().slice(0,10)}.zip"`);
-    res.setHeader('Content-Length', zipBuf.length);
-    res.send(zipBuf);
-  } catch (e) {
-    console.error('Error exportar responsivas equipo:', e);
+    console.error('Error exportar ZIP completo:', e);
     if (!res.headersSent) res.status(500).json({ error: 'Error al generar archivo' });
   }
 });
