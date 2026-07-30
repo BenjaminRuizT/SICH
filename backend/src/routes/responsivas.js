@@ -63,9 +63,9 @@ function safeFilename(name) {
 function dataUrlToBuffer(dataUrl) {
   if (!dataUrl || typeof dataUrl !== 'string') return null;
   try {
-    const b64 = dataUrl.replace(/^data:image\/[a-z+]+;base64,/, '');
-    if (!b64) return null;
-    return Buffer.from(b64, 'base64');
+    const match = dataUrl.match(/^data:[^;]+;base64,(.+)/s);
+    if (!match || !match[1]) return null;
+    return Buffer.from(match[1].trim(), 'base64');
   } catch { return null; }
 }
 
@@ -80,360 +80,287 @@ try {
   if (fs.existsSync(p)) femsaLogoBuffer = fs.readFileSync(p);
 } catch {}
 
-// ── PDF builders ─────────────────────────────────────────────────────────────
+const femsaLogoDataUrl = femsaLogoBuffer ? `data:image/png;base64,${femsaLogoBuffer.toString('base64')}` : '';
+const oxxoLogoDataUrl  = oxxoLogoBuffer  ? `data:image/png;base64,${oxxoLogoBuffer.toString('base64')}`  : '';
 
-function buildAutoPDF(rev, auto) {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Carta Compromiso Auto - ${folio(rev.id)}` } });
-      const chunks = [];
-      doc.on('data', c => chunks.push(c));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+// ── HTML carta builders (idénticos al render React — el usuario abre y Ctrl+P) ─
 
-      const emp  = rev.empleado_snapshot || {};
-      const snap = (auto.herramienta_snapshot && typeof auto.herramienta_snapshot === 'object') ? auto.herramienta_snapshot : {};
-      const L = 50, W = 495, PH = doc.page.height, PM = 50;
+function buildAutoHTML(rev, rawAuto) {
+  const emp  = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object') ? rev.empleado_snapshot : {};
+  const snap = (rawAuto.herramienta_snapshot && typeof rawAuto.herramienta_snapshot === 'object') ? rawAuto.herramienta_snapshot : {};
 
-      const nombreEmp = emp.nombre_completo || '_________________________';
-      const puesto    = emp.posicion       || '_________________________';
-      const plaza     = emp.plaza          || '_________________________';
-      const marca     = snap.marca         || '';
-      const modelo    = auto.no_modelo     || snap.modelo || '_________________________';
-      const anio      = snap.anio          || '_____';
-      const serie     = auto.no_serie      || snap.serie  || '_________________________';
-      const placas    = auto.placas        || '—';
-      const domicilio = auto.domicilio     || '________________________________';
-      const cp        = auto.codigo_postal || '______';
-      const fol       = folio(rev.id);
-      const fecha     = fmtDate(rev.fecha_revision);
+  const marca      = snap.marca       || '';
+  const modelo     = rawAuto.no_modelo || snap.modelo || '';
+  const anio       = snap.anio        || '';
+  const serie      = rawAuto.no_serie  || snap.serie  || '';
+  const placas     = rawAuto.placas   || '';
+  const plaza      = emp.plaza        || '';
+  const puesto     = emp.posicion     || '';
+  const nombreEmp  = emp.nombre_completo || '';
+  const fol        = folio(rev.id);
+  const fecha      = fmtDate(rev.fecha_revision);
+  const danos      = Array.isArray(rawAuto.danos) ? rawAuto.danos : [];
+  const firmaEmp   = dec(rawAuto.firma_empleado);
+  const firmaRH    = dec(rawAuto.firma_responsable_rh);
+  const b = v => v || '________________________________';
+  const yn = v => (v === true || v === 'true' || v === 'Sí') ? 'Sí' : (v === false || v === 'false' || v === 'No') ? 'No' : '—';
 
-      function drawCartaAutoHeader(hoja) {
-        const y0 = doc.y;
-        const LOGO_W = 110, TITLE_W = 170, C_W = 110, F_W = 105;
-        const xLogo = L, xTitle = L + LOGO_W, xCode = xTitle + TITLE_W, xFlio = xCode + C_W;
-        const H = 18;
+  const logoTag = femsaLogoDataUrl
+    ? `<img src="${femsaLogoDataUrl}" alt="FEMSA" style="max-width:100%;max-height:60px;object-fit:contain">`
+    : '<strong style="color:#b91c1c;font-size:13px">FEMSA Comercio</strong>';
 
-        doc.rect(xLogo, y0, LOGO_W, H * 3).stroke('#555');
-        if (femsaLogoBuffer) {
-          try { doc.image(femsaLogoBuffer, xLogo + 5, y0 + 4, { fit: [LOGO_W - 10, H * 3 - 8] }); } catch {}
-        } else {
-          doc.font('Helvetica-Bold').fontSize(8).fillColor('#c00')
-            .text('FEMSA\nComercio', xLogo + 4, y0 + H, { width: LOGO_W - 8, align: 'center' });
-          doc.fillColor('black');
-        }
+  const headerTable = (hoja) => `
+  <table style="border-collapse:collapse;width:100%;font-size:10px;margin-bottom:16px">
+    <tr>
+      <td rowspan="3" style="border:1px solid #111;width:120px;text-align:center;padding:4px">${logoTag}</td>
+      <td colspan="2" style="border:1px solid #111;text-align:center;padding:2px 4px">FORMATO</td>
+      <td style="border:1px solid #111;padding:2px 4px">CÓDIGO: OYC</td>
+      <td style="border:1px solid #111;padding:2px 4px">FOLIO: ${fol}</td>
+    </tr>
+    <tr>
+      <td colspan="2" rowspan="2" style="border:1px solid #111;text-align:center;font-weight:900;font-size:16px;color:#b91c1c;padding:4px">CARTA COMPROMISO</td>
+      <td colspan="2" style="border:1px solid #111;padding:2px 4px">REVISIÓN: 01. ELABORADO: 09/May/03</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #111;padding:2px 4px">Fecha de auditoría: ${fecha}</td>
+      <td style="border:1px solid #111;padding:2px 4px">Hoja ${hoja} de 2</td>
+    </tr>
+  </table>`;
 
-        doc.rect(xTitle, y0, TITLE_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(7).text('FORMATO', xTitle + 2, y0 + 4, { width: TITLE_W - 4, align: 'center' });
-        doc.rect(xCode, y0, C_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(7).text('CÓDIGO: OYC', xCode + 2, y0 + 4, { width: C_W - 4 });
-        doc.rect(xFlio, y0, F_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(7).text(`FOLIO: ${fol}`, xFlio + 2, y0 + 4, { width: F_W - 4 });
+  const authTable = () => `
+  <table style="border-collapse:collapse;width:100%;font-size:10px;margin-top:20px">
+    <tr>
+      <td style="border:1px solid #111;background:#e5e7eb;font-weight:bold;text-align:center;padding:3px">AUTORIZACION</td>
+      <td colspan="2" style="border:1px solid #111;text-align:center;padding:3px">OXXO | Uso Interno</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #111;font-weight:bold;text-align:center;padding:3px">RESPONSABLE</td>
+      <td style="border:1px solid #111;font-weight:bold;text-align:center;padding:3px">AUTORIZA</td>
+      <td style="border:1px solid #111;font-weight:bold;text-align:center;padding:3px">AUTORIZA</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #111;text-align:center;padding:3px;height:20px">ORGANIZACIÓN Y COMPENSACIONES</td>
+      <td style="border:1px solid #111;text-align:center;padding:3px">DIRECTOR GENERAL</td>
+      <td style="border:1px solid #111;text-align:center;padding:3px">DIRECTOR RECURSOS HUMANOS</td>
+    </tr>
+  </table>`;
 
-        const y2 = y0 + H;
-        doc.rect(xTitle, y2, TITLE_W, H * 2).stroke('#555');
-        doc.font('Helvetica-Bold').fontSize(11).fillColor('#cc0000')
-          .text('CARTA COMPROMISO', xTitle + 2, y2 + 7, { width: TITLE_W - 4, align: 'center' });
-        doc.fillColor('black');
-        doc.rect(xCode, y2, C_W + F_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(6.5).text('REVISIÓN: 01.  ELABORADO: 09/May/03', xCode + 2, y2 + 4, { width: C_W + F_W - 4 });
+  return `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Carta Compromiso - ${fol}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,"Times New Roman",serif;font-size:12px;color:#000;background:#f3f4f6}
+.page{width:210mm;max-width:100%;margin:10mm auto;padding:18mm 18mm;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.text{font-size:11px;line-height:1.65}
+.text p{margin-bottom:6px}
+.section-title{text-align:center;font-weight:bold;letter-spacing:.15em;margin:8px 0}
+ol{padding-left:20px}
+ol li{margin-bottom:5px}
+u{text-decoration:underline;padding:0 2px}
+.data-box{margin:12px 0;padding:10px;border:1px solid #d1d5db;background:#f9fafb;font-size:11px}
+.data-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:4px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:24px;text-align:center}
+.sig-img{height:64px;max-width:100%;border-bottom:1px solid #666;display:block;margin:0 auto;object-fit:contain}
+.sig-line{height:64px;border-bottom:1px solid #666;margin:0 auto;width:100%}
+.sig-name{font-size:11px;font-weight:bold;margin-top:4px}
+.sig-label{font-size:10px;color:#555;margin-top:2px}
+.footer{margin-top:20px;padding-top:10px;border-top:1px solid #d1d5db;font-size:8px;color:#6b7280}
+.btn{position:fixed;top:10px;right:10px;background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;z-index:999}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:12mm 14mm}.page-break{page-break-after:always}.btn{display:none}}
+</style>
+</head>
+<body>
+<button class="btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
 
-        const y3 = y2 + H;
-        doc.rect(xCode, y3, C_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(6.5).text(`Fecha: ${fecha}`, xCode + 2, y3 + 4, { width: C_W - 4 });
-        doc.rect(xFlio, y3, F_W, H).stroke('#555');
-        doc.font('Helvetica').fontSize(6.5).text(`Hoja ${hoja} de 2`, xFlio + 2, y3 + 4, { width: F_W - 4, align: 'center' });
+<div class="page page-break">
+  ${headerTable('1')}
+  <div class="text">
+    <p><strong>1.1</strong> Convenio de uso de herramienta de trabajo que celebran por una parte Cadena Comercial Oxxo a quien en lo sucesivo se le denominará "la empresa" y por la otra <u>${nombreEmp}</u> con domicilio en <u>${rawAuto.domicilio || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</u> C.P <u>${rawAuto.codigo_postal || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</u>. a quien en lo sucesivo se denominará "el empleado" y manifiestan que celebran el presente al tenor de las siguientes</p>
+    <p class="section-title">D E C L A R A C I O N E S</p>
+    <p><strong>I.</strong> Declara que su representada es una sociedad mercantil establecida conforme a las leyes mexicanas, y que dentro de su objeto social, se establece la posibilidad de celebrar contratos y convenios.</p>
+    <p><strong>II.</strong> Manifiesta que tiene celebrado contrato de trabajo con <strong><u>Cadena Comercial Oxxo, SA de CV</u></strong> y que en el cuerpo del mismo se compromete expresamente a prestar sus servicios personales a terceros y que tal es el caso que ha sido asignado a <u>${b(plaza)}</u> en el puesto de <u>${b(puesto)}</u> y que para realizar las labores inherentes a su contrato de trabajo es necesario contar con un automóvil como herramienta de trabajo.</p>
+    <p><strong>III.</strong> Ambas partes manifiestan que celebran el presente convenio al tenor de las siguientes:</p>
+    <p class="section-title">2&nbsp;&nbsp;&nbsp;C L A U S U L A S</p>
+    <p>"La empresa" hace entrega de un automóvil <u>${b(marca)} ${modelo}</u> modelo <u>${b(anio)}</u> con número de serie <u>${b(serie)}</u> mismo que deberá de ser utilizado única y exclusivamente en el cumplimiento de las labores inherentes al puesto de <u>${b(puesto)}</u> que la empresa le asigne a "el empleado" previa autorización del representante legal de la misma.</p>
+    <ol style="margin-top:8px">
+      <li>"La empresa" cubrirá los gastos que imponen las leyes y reglamentos tales como placas, tenencias, revisados y demás derechos o impuestos que procedan por la tenencia, uso o disfrute el automóvil. "El empleado" cubrirá todas las sanciones o multas que provengan de infracciones a reglamentos o leyes, lo mismo los gastos de grúa que se ocasionen.</li>
+      <li>La empresa comprará por su cuenta un seguro de Cobertura Total. Los daños que reciba el vehículo o gastos que se deriven de algún accidente y no estén cubiertos por alguna póliza, serán pagados por la empresa, así como los deducibles normales.</li>
+      <li>Los deducibles provenientes de accidentes en los que participe algún conductor que no tenga relación con la empresa y los daños que el seguro no cubra por falta de licencia del conductor, serán cubiertos de contado y cuando "la empresa" lo solicite a "el empleado" que tiene asignado el automóvil.</li>
+    </ol>
+  </div>
+  ${authTable()}
+</div>
 
-        doc.y = y0 + H * 3 + 10;
-        doc.strokeColor('black').fillColor('black').font('Helvetica');
-      }
+<div class="page">
+  ${headerTable('2')}
+  <div class="text">
+    <ol start="4">
+      <li>"El Empleado" se compromete a utilizar personalmente el automóvil que "la empresa" le hace entrega única y exclusivamente en las actividades inherentes al puesto de <u>${b(puesto)}</u> otras que la empresa le asigne, deberá de respetar siempre la imagen de "la empresa", y por ningún motivo podrá prestarlo, cederlo ó traspasarlo a otra persona sin previa autorización por escrito del representante legal de la misma.</li>
+      <li>En periodo de vacaciones el automóvil invariablemente deberá permanecer en la empresa.</li>
+      <li>"El empleado es responsable de la operación correcta del automóvil que le ha sido asignado, el incumplimiento de las condiciones pactadas son motivo de sanción y en caso de reincidir es motivo de rescisión de contrato individual de trabajo.</li>
+      <li>"El empleado" se compromete a mantener el automóvil en perfectas condiciones, si el carro sufre cualquier siniestro, aun siendo este menor deberá ser reparado a la brevedad posible.</li>
+      <li>"La empresa" se compromete a cubrir los gastos de operación y mantenimiento del automóvil conforme a las normas y criterios establecidos en el reglamento de automóviles vigentes en la misma.</li>
+      <li>Se deberá establecer un programa de mantenimiento preventivo que asegure la operación cotidiana y alargue la vida útil de automóvil, será responsabilidad de "el empleado" que tiene asignado el automóvil el estado y conservación del mismo y sujetarse totalmente a lo que "la empresa" establezca.</li>
+      <li>En caso de separarse "el empleado" del puesto que tenía asignado por cualquier motivo (promoción, renuncia, indemnización, etc.), Este deberá entregar el automóvil en perfectas condiciones de uso y operación a "la empresa" en la fecha de su separación.</li>
+      <li>Manifiesta "el empleado" que el automóvil que le ha sido asignado es herramienta de trabajo y que no forma parte integrante de sus prestaciones, por lo que en este acto acepta que en ningún momento se deberá integrar a su salario.</li>
+      <li><strong>Ambas partes firman el presente convenio de conformidad en la ciudad de <u>${b(plaza)}</u> a <u>${fecha}</u></strong></li>
+    </ol>
 
-      function drawAuthTable(y) {
-        const cw = W / 3;
-        const H1 = 15;
-        [
-          ['AUTORIZACION', 'OXXO | Uso Interno', ''],
-          ['RESPONSABLE', 'AUTORIZA', 'AUTORIZA'],
-          ['ORGANIZACIÓN Y COMPENSACIONES', 'DIRECTOR GENERAL', 'DIRECTOR RECURSOS HUMANOS'],
-        ].forEach((row, ri) => {
-          row.forEach((text, ci) => {
-            const rx = L + ci * cw, ry = y + ri * H1;
-            const fill = ri === 0 ? '#e8e8e8' : 'white';
-            doc.rect(rx, ry, cw, H1).fillAndStroke(fill, '#555');
-            doc.font(ri < 2 ? 'Helvetica-Bold' : 'Helvetica').fontSize(6.5).fillColor('#333')
-              .text(text, rx + 2, ry + 4, { width: cw - 4, align: 'center' });
-            doc.fillColor('black');
-          });
-        });
-      }
+    <div class="data-box">
+      <strong>Datos de la unidad revisada:</strong>
+      <div class="data-grid">
+        <span>Marca/Modelo: <strong>${marca} ${modelo}</strong></span>
+        <span>Año: <strong>${anio || '—'}</strong></span>
+        <span>No. Serie: <strong>${serie || '—'}</strong></span>
+        <span>Placas: <strong>${placas || '—'}</strong></span>
+        <span>CB: <strong>${rawAuto.codigo_barras || '—'}</strong></span>
+        <span>Km: <strong>${rawAuto.kilometraje || '—'}</strong></span>
+        <span>Póliza de seguro: <strong>${yn(rawAuto.poliza_seguro)}</strong></span>
+        <span>Licencia vigente: <strong>${yn(rawAuto.licencia_numero)}</strong></span>
+        <span>Llanta refacción: <strong>${yn(rawAuto.llanta_refaccion)}</strong></span>
+        <span>Gato / Cruceta: <strong>${yn(rawAuto.gato_cruceta)}</strong></span>
+      </div>
+      ${rawAuto.comentarios ? `<p style="margin-top:4px">Comentarios: <em>${rawAuto.comentarios}</em></p>` : ''}
+      ${danos.length > 0 ? `<div style="margin-top:6px"><strong>Daños:</strong><ul style="padding-left:16px">${danos.map(d => `<li>${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}</li>`).join('')}</ul></div>` : ''}
+    </div>
 
-      // ── PÁGINA 1 ────────────────────────────────────────────────────────────
-      drawCartaAutoHeader('1');
-      doc.font('Helvetica').fontSize(8.5).fillColor('black');
+    <div class="sigs">
+      <div>
+        ${firmaEmp ? `<img class="sig-img" src="${firmaEmp}" alt="Firma empleado">` : '<div class="sig-line"></div>'}
+        <p class="sig-name">${nombreEmp}</p>
+        <p class="sig-label">Nombre y Firma del Empleado</p>
+      </div>
+      <div>
+        ${firmaRH ? `<img class="sig-img" src="${firmaRH}" alt="Firma RH">` : '<div class="sig-line"></div>'}
+        ${rawAuto.nombre_responsable_rh ? `<p class="sig-name">${rawAuto.nombre_responsable_rh}</p>` : ''}
+        <p class="sig-label">RH de la Unidad de Negocio</p>
+      </div>
+    </div>
 
-      doc.text(
-        `1.1 Convenio de uso de herramienta de trabajo que celebran por una parte Cadena Comercial Oxxo a quien en lo sucesivo se le denominará "la empresa" y por la otra ${nombreEmp} con domicilio en ${domicilio} C.P ${cp}. a quien en lo sucesivo se denominará "el empleado" y manifiestan que celebran el presente al tenor de las siguientes`,
-        { align: 'justify' }
-      );
-      doc.moveDown(0.4);
-      doc.font('Helvetica-Bold').fontSize(9).text('D E C L A R A C I O N E S', { align: 'center' });
-      doc.moveDown(0.3);
-
-      doc.font('Helvetica-Bold').fontSize(8.5).text('I.', { continued: true }).font('Helvetica')
-        .text(' Declara que su representada es una sociedad mercantil establecida conforme a las leyes mexicanas, y que dentro de su objeto social, se establece la posibilidad de celebrar contratos y convenios.', { align: 'justify' });
-      doc.moveDown(0.3);
-
-      doc.font('Helvetica-Bold').text('II.', { continued: true }).font('Helvetica')
-        .text(` Manifiesta que tiene celebrado contrato de trabajo con Cadena Comercial Oxxo, SA de CV y que en el cuerpo del mismo se compromete expresamente a prestar sus servicios personales a terceros y que tal es el caso que ha sido asignado a ${plaza} en el puesto de ${puesto} y que para realizar las labores inherentes a su contrato de trabajo es necesario contar con un automóvil como herramienta de trabajo.`, { align: 'justify' });
-      doc.moveDown(0.3);
-
-      doc.font('Helvetica-Bold').text('III.', { continued: true }).font('Helvetica')
-        .text(' Ambas partes manifiestan que celebran el presente convenio al tenor de las siguientes:', { align: 'justify' });
-      doc.moveDown(0.4);
-
-      doc.font('Helvetica-Bold').fontSize(9).text('2   C L A U S U L A S', { align: 'center' });
-      doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(8.5);
-      doc.text(
-        `"La empresa" hace entrega de un automóvil ${[marca, modelo].filter(Boolean).join(' ')} modelo ${anio} con número de serie ${serie} mismo que deberá de ser utilizado única y exclusivamente en el cumplimiento de las labores inherentes al puesto de ${puesto} que la empresa le asigne a "el empleado" previa autorización del representante legal de la misma.`,
-        { align: 'justify' }
-      );
-      doc.moveDown(0.3);
-
-      [
-        `"La empresa" cubrirá los gastos que imponen las leyes y reglamentos tales como placas, tenencias, revisados y demás derechos o impuestos que procedan por la tenencia, uso o disfrute el automóvil. "El empleado" cubrirá todas las sanciones o multas que provengan de infracciones a reglamentos o leyes, lo mismo los gastos de grúa que se ocasionen.`,
-        `La empresa comprará por su cuenta un seguro de Cobertura Total. Los daños que reciba el vehículo o gastos que se deriven de algún accidente y no estén cubiertos por alguna póliza, serán pagados por la empresa, así como los deducibles normales.`,
-        `Los deducibles provenientes de accidentes en los que participe algún conductor que no tenga relación con la empresa y los daños que el seguro no cubra por falta de licencia del conductor, serán cubiertos de contado y cuando "la empresa" lo solicite a "el empleado" que tiene asignado el automóvil.`,
-      ].forEach((text, i) => {
-        doc.font('Helvetica-Bold').fontSize(8.5).text(`${i + 1}.`, { continued: true })
-          .font('Helvetica').text(` ${text}`, { align: 'justify' });
-        doc.moveDown(0.3);
-      });
-
-      drawAuthTable(PH - PM - 50);
-
-      // ── PÁGINA 2 ────────────────────────────────────────────────────────────
-      doc.addPage();
-      drawCartaAutoHeader('2');
-      doc.font('Helvetica').fontSize(8.5).fillColor('black');
-
-      [
-        `"El Empleado" se compromete a utilizar personalmente el automóvil que "la empresa" le hace entrega única y exclusivamente en las actividades inherentes al puesto de ${puesto} otras que la empresa le asigne, deberá de respetar siempre la imagen de "la empresa", y por ningún motivo podrá prestarlo, cederlo ó traspasarlo a otra persona sin previa autorización por escrito del representante legal de la misma.`,
-        `En periodo de vacaciones el automóvil invariablemente deberá permanecer en la empresa.`,
-        `"El empleado" es responsable de la operación correcta del automóvil que le ha sido asignado, el incumplimiento de las condiciones pactadas son motivo de sanción y en caso de reincidir es motivo de rescisión de contrato individual de trabajo.`,
-        `"El empleado" se compromete a mantener el automóvil en perfectas condiciones, si el carro sufre cualquier siniestro, aun siendo este menor deberá ser reparado a la brevedad posible.`,
-        `"La empresa" se compromete a cubrir los gastos de operación y mantenimiento del automóvil conforme a las normas y criterios establecidos en el reglamento de automóviles vigentes en la misma.`,
-        `Se deberá establecer un programa de mantenimiento preventivo que asegure la operación cotidiana y alargue la vida útil del automóvil; será responsabilidad del empleado que tiene asignado el automóvil el estado y conservación del mismo, sujetándose a lo que la empresa establezca.`,
-        `En caso de separarse el empleado del puesto que tenía asignado por cualquier motivo (promoción, renuncia, indemnización, etc.), deberá entregar el automóvil en perfectas condiciones de uso y operación a la empresa en la fecha de su separación.`,
-        `Manifiesta el empleado que el automóvil que le ha sido asignado es herramienta de trabajo y que no forma parte integrante de sus prestaciones, por lo que en este acto acepta que en ningún momento se deberá integrar a su salario. Ambas partes firman el presente convenio de conformidad en la ciudad de ${plaza} a ${fecha}.`,
-      ].forEach((text, i) => {
-        doc.font('Helvetica-Bold').fontSize(8.5).text(`${i + 4}.`, { continued: true })
-          .font('Helvetica').text(` ${text}`, { align: 'justify' });
-        doc.moveDown(0.3);
-      });
-
-      // Datos de la unidad
-      doc.moveDown(0.2);
-      const dtY = doc.y;
-      doc.rect(L, dtY, W, 13).fillAndStroke('#f0f0f0', '#888');
-      doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#333')
-        .text('Datos de la unidad revisada:', L + 4, dtY + 3, { width: W - 8 });
-      doc.fillColor('black');
-      doc.y = dtY + 13;
-
-      const yn = (v) => (v === true || v === 'true' || v === 1) ? 'Sí' : (v === false || v === 'false' || v === 0) ? 'No' : '—';
-      [
-        [`Marca/Modelo: ${[marca, modelo].filter(Boolean).join(' ')}`, `Año: ${snap.anio || '—'}`],
-        [`No. Serie: ${serie}`, `Placas: ${placas}`],
-        [`CB: ${auto.codigo_barras || '—'}`, `Km: ${auto.kilometraje != null ? auto.kilometraje + ' km' : '—'}`],
-        [`Póliza seguro: ${yn(auto.poliza_seguro)}`, `Licencia: ${yn(auto.licencia_numero)}`],
-        [`Llanta refacción: ${yn(auto.llanta_refaccion)}`, `Gato/Cruceta: ${yn(auto.gato_cruceta)}`],
-        [`Tarjeta circulación: ${yn(auto.tarjeta_circulacion)}`, `Domicilio: ${auto.domicilio || '—'}`],
-      ].forEach(([left, right]) => {
-        const ry = doc.y;
-        doc.font('Helvetica').fontSize(7).fillColor('#222').text(left, L + 4, ry, { width: W / 2 - 8 });
-        doc.text(right, L + W / 2 + 4, ry, { width: W / 2 - 8 });
-        doc.y = ry + 11;
-      });
-
-      const danos = Array.isArray(auto.danos) ? auto.danos : [];
-      if (danos.length) {
-        doc.moveDown(0.2);
-        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#92400e').text('Daños:');
-        danos.forEach(d => doc.font('Helvetica').fontSize(7).fillColor('#78350f')
-          .text(`  • ${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`));
-        doc.fillColor('black');
-      }
-      if (auto.comentarios) {
-        doc.moveDown(0.2);
-        doc.font('Helvetica').fontSize(7.5).fillColor('#374151').text(`Comentarios: ${auto.comentarios}`);
-        doc.fillColor('black');
-      }
-
-      // Firmas
-      doc.moveDown(0.6);
-      const sigY = doc.y, SIGW = W / 2 - 20, SIG_H = 50, rhX = L + W / 2 + 10;
-
-      addSig(doc, dec(auto.firma_empleado), L, sigY, SIGW, SIG_H);
-      doc.moveTo(L, sigY + SIG_H).lineTo(L + SIGW, sigY + SIG_H).stroke('#333');
-      doc.font('Helvetica').fontSize(7.5).fillColor('#333')
-        .text(nombreEmp, L, sigY + SIG_H + 3, { width: SIGW, align: 'center' })
-        .text('Nombre y Firma del Empleado', L, sigY + SIG_H + 13, { width: SIGW, align: 'center' });
-
-      addSig(doc, dec(auto.firma_responsable_rh), rhX, sigY, SIGW, SIG_H);
-      doc.moveTo(rhX, sigY + SIG_H).lineTo(rhX + SIGW, sigY + SIG_H).stroke('#333');
-      if (auto.nombre_responsable_rh)
-        doc.font('Helvetica').fontSize(7.5).fillColor('#333')
-          .text(auto.nombre_responsable_rh, rhX, sigY + SIG_H + 3, { width: SIGW, align: 'center' });
-      doc.text('RH de la Unidad de Negocio', rhX, sigY + SIG_H + 13, { width: SIGW, align: 'center' });
-
-      doc.y = sigY + SIG_H + 26;
-      doc.fillColor('black').strokeColor('black');
-      doc.moveTo(L, doc.y).lineTo(L + W, doc.y).stroke('#ccc');
-      doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(6.5).fillColor('#666')
-        .text(`Folio: ${fol}  ·  Revisión: ${fmtFull(rev.fecha_revision)}  ·  Auditor: ${rev.auditor_nombre || '—'}`, { align: 'center' })
-        .text('Sistema de Control de Herramienta — Cadena Comercial OXXO, S.A. DE C.V.', { align: 'center' });
-
-      drawAuthTable(PH - PM - 50);
-
-      doc.fillColor('black').font('Helvetica');
-      doc.end();
-    } catch (err) { reject(err); }
-  });
+    <div class="footer">
+      <p><strong>Validez y autenticidad del documento</strong></p>
+      <p>Folio: <strong>${fol}</strong> · Generado: ${fmtFull(rev.fecha_revision)}</p>
+      <p>Auditor: ${rev.auditor_nombre || '—'}</p>
+      <p style="margin-top:4px">Este documento fue generado digitalmente mediante el Sistema de Control de Herramienta de Cadena Comercial OXXO. Las firmas electrónicas fueron capturadas al momento de la revisión y tienen plena validez conforme al Art. 1803 del Código Civil Federal y la Ley de Firma Electrónica Avanzada. Cualquier alteración invalida este documento.</p>
+    </div>
+  </div>
+  ${authTable()}
+</div>
+</body></html>`;
 }
 
-function buildEquipoPDF(rev, equipo) {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `Carta Responsiva Equipo - ${folio(rev.id)}` } });
-      const chunks = [];
-      doc.on('data', c => chunks.push(c));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+function buildEquipoHTML(rev, rawEquipo, ciudad) {
+  const emp  = (rev.empleado_snapshot && typeof rev.empleado_snapshot === 'object') ? rev.empleado_snapshot : {};
+  const snap = (rawEquipo.herramienta_snapshot && typeof rawEquipo.herramienta_snapshot === 'object') ? rawEquipo.herramienta_snapshot : {};
 
-      const emp  = rev.empleado_snapshot || {};
-      const snap = (equipo.herramienta_snapshot && typeof equipo.herramienta_snapshot === 'object') ? equipo.herramienta_snapshot : {};
-      const L = 50, W = 495;
+  const plaza        = emp.plaza        || '';
+  const ciudadStr    = ciudad || plaza || 'Tijuana, B.C.';
+  const nombreEmp    = emp.nombre_completo || '';
+  const puesto       = emp.posicion     || '';
+  const marca        = rawEquipo.marca  || snap.marca  || '';
+  const modelo       = rawEquipo.modelo || snap.modelo || '';
+  const descripcion  = [marca, modelo].filter(Boolean).join(' ');
+  const codigoBarras = rawEquipo.codigo_barras || snap.codigo_barras || '—';
+  const serie        = rawEquipo.serie  || snap.serie  || '—';
+  const nombreRH     = rawEquipo.nombre_responsable_rh || '';
+  const fol          = folio(rev.id);
+  const fecha        = fmtDate(rev.fecha_revision);
+  const danos        = Array.isArray(rawEquipo.danos) ? rawEquipo.danos : [];
+  const firmaRH      = dec(rawEquipo.firma_responsable_rh);
+  const firmaEmp     = dec(rawEquipo.firma_empleado);
+  const firmaAud     = dec(rawEquipo.firma_auditor);
 
-      const plaza     = emp.plaza          || '_________________________';
-      const ciudad    = rev._ciudad        || emp.plaza || 'Tijuana, B.C.';
-      const nombreEmp = emp.nombre_completo || '_________________________';
-      const puesto    = emp.posicion        || '—';
-      const marca     = equipo.marca  || snap.marca  || '';
-      const modelo    = equipo.modelo || snap.modelo || '';
-      const codigoBarras = equipo.codigo_barras || snap.codigo_barras || '—';
-      const serie     = equipo.serie  || snap.serie  || '—';
-      const fol       = folio(rev.id);
+  const logoTag = oxxoLogoDataUrl
+    ? `<img src="${oxxoLogoDataUrl}" alt="OXXO" style="height:56px;object-fit:contain">`
+    : '<strong style="color:#e8540c;font-size:22px">OXXO</strong>';
 
-      // Encabezado: logo OXXO + PLAZA
-      const headerY = doc.y;
-      if (oxxoLogoBuffer) {
-        try { doc.image(oxxoLogoBuffer, L, headerY, { width: 65, height: 32 }); } catch {}
-      } else {
-        doc.font('Helvetica-Bold').fontSize(18).fillColor('#e8540c').text('OXXO', L, headerY + 4);
-        doc.fillColor('black');
-      }
-      doc.font('Helvetica-Bold').fontSize(13).fillColor('black')
-        .text(`PLAZA  ${plaza}`, L + 75, headerY + 7, { width: W - 75, align: 'center' });
-      doc.y = headerY + 42;
-      doc.moveTo(L, doc.y).lineTo(L + W, doc.y).stroke('#888');
-      doc.strokeColor('black');
-      doc.moveDown(0.8);
+  return `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Carta Responsiva Equipo - ${fol}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;background:#f3f4f6}
+.page{width:210mm;max-width:100%;margin:10mm auto;padding:22mm 22mm;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+u{text-decoration:underline;padding:0 4px;display:inline-block;min-width:120px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:32px;text-align:center}
+.sig-img{height:80px;max-width:100%;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
+.sig-line{height:80px;border-bottom:2px solid #111}
+.sig-title{font-weight:bold;margin-bottom:32px}
+.testigo{text-align:center;margin-top:28px}
+.testigo-img{height:64px;max-width:200px;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
+.testigo-line{height:64px;border-bottom:2px solid #111;max-width:200px;margin:0 auto}
+.footer{margin-top:24px;padding-top:12px;border-top:1px solid #d1d5db;font-size:8px;color:#6b7280}
+.btn{position:fixed;top:10px;right:10px;background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;z-index:999}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:15mm 18mm}.btn{display:none}}
+</style>
+</head>
+<body>
+<button class="btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
 
-      // Fecha alineada a la derecha
-      doc.font('Helvetica').fontSize(9)
-        .text(`${ciudad}, a ${fmtDate(rev.fecha_revision)}`, L, doc.y, { width: W, align: 'right' });
-      doc.moveDown(1.2);
+<div class="page">
+  <div style="display:flex;align-items:center;margin-bottom:40px">
+    ${logoTag}
+    <p style="flex:1;text-align:center;font-size:18px;font-weight:900;letter-spacing:.05em">
+      PLAZA <u style="min-width:120px">${plaza || '_______________'}</u>
+    </p>
+  </div>
 
-      // Cuerpo
-      const desc = [marca, modelo].filter(Boolean).join(' ') || '_________________________';
-      doc.font('Helvetica').fontSize(10)
-        .text('Hago entrega para uso laboral de Laptop ', { continued: true })
-        .font('Helvetica-Bold').text(desc, { continued: true })
-        .font('Helvetica').text(', para el buen uso y al servicio de la Compañía ')
-        .font('Helvetica-Bold').text('CADENA COMERCIAL OXXO, S.A. DE C. V.', { align: 'justify' });
-      doc.moveDown(1.5);
+  <p style="text-align:right;font-size:13px;margin-bottom:40px">
+    ${ciudadStr}, a <u style="min-width:140px">${fecha}</u>
+  </p>
 
-      // Datos del activo (centrado)
-      doc.font('Helvetica-Bold').fontSize(10).text('NÚMERO DE ACTIVO:', L, doc.y, { width: W, align: 'center' });
-      doc.font('Helvetica').fontSize(10).text(codigoBarras, L, doc.y, { width: W, align: 'center' });
-      doc.moveDown(0.5);
-      doc.font('Helvetica-Bold').fontSize(10).text('NÚMERO DE SERIE:', L, doc.y, { width: W, align: 'center' });
-      doc.font('Helvetica').fontSize(10).text(serie, L, doc.y, { width: W, align: 'center' });
+  <p style="font-size:13px;line-height:1.7;margin-bottom:40px">
+    Hago entrega para uso laboral <strong>de Laptop <u>${descripcion || '___________________________'}</u></strong>,
+    para el buen uso y al servicio de la Compañía <strong>CADENA COMERCIAL OXXO, S.A. DE C. V.</strong>
+  </p>
 
-      const danos = Array.isArray(equipo.danos) ? equipo.danos : [];
-      if (danos.length) {
-        doc.moveDown(0.8);
-        doc.rect(L, doc.y, W, 12).fillAndStroke('#f9f9f9', '#ccc');
-        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#333').text('Daños o desperfectos:', L + 4, doc.y + 2, { width: W - 8 });
-        doc.fillColor('black');
-        doc.y += 12;
-        danos.forEach(d => doc.font('Helvetica').fontSize(8)
-          .text(`  • ${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`));
-      }
-      if (equipo.comentarios) {
-        doc.moveDown(0.4);
-        doc.font('Helvetica').fontSize(8).fillColor('#374151').text(`Comentarios: ${equipo.comentarios}`);
-        doc.fillColor('black');
-      }
+  <div style="text-align:center;margin-bottom:40px">
+    <p style="margin-bottom:12px"><strong>NUMERO DE ACTIVO:</strong> <u style="min-width:180px">${codigoBarras}</u></p>
+    <p><strong>NÚMERO DE SERIE:</strong> <u style="min-width:180px">${serie}</u></p>
+  </div>
 
-      // Firmas: ENTREGA | RECIBE
-      doc.moveDown(2);
-      const sigLabelY = doc.y;
-      const SIGW = W / 2 - 20, SIG_H = 55, rhX = L + W / 2 + 10;
+  ${danos.length > 0 ? `
+  <div style="margin-bottom:24px;padding:10px;border:1px solid #9ca3af;border-radius:4px;font-size:12px">
+    <p style="font-weight:600;margin-bottom:4px">Daños o desperfectos registrados:</p>
+    <ul style="padding-left:16px">${danos.map(d => `<li>${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}</li>`).join('')}</ul>
+  </div>` : ''}
+  ${rawEquipo.comentarios ? `<p style="font-size:12px;margin-bottom:20px;color:#4b5563">Comentarios: <em>${rawEquipo.comentarios}</em></p>` : ''}
 
-      doc.font('Helvetica-Bold').fontSize(10)
-        .text('ENTREGA', L, sigLabelY, { width: SIGW, align: 'center' })
-        .text('RECIBE', rhX, sigLabelY, { width: SIGW, align: 'center' });
+  <div class="sigs">
+    <div>
+      <p class="sig-title">ENTREGA</p>
+      ${firmaRH ? `<img class="sig-img" src="${firmaRH}" alt="Firma RH">` : '<div class="sig-line"></div>'}
+      <p style="font-weight:bold;margin-top:6px">RESPONSABLE DE RH</p>
+      ${nombreRH ? `<p style="font-size:12px;color:#555;margin-top:2px">${nombreRH}</p>` : ''}
+    </div>
+    <div>
+      <p class="sig-title">RECIBE</p>
+      ${firmaEmp ? `<img class="sig-img" src="${firmaEmp}" alt="Firma empleado">` : '<div class="sig-line"></div>'}
+      <p style="font-size:12px;margin-top:6px"><strong>Nombre:</strong> ${nombreEmp}</p>
+      <p style="font-size:12px"><strong>Puesto:</strong> ${puesto || '—'}</p>
+    </div>
+  </div>
 
-      const sigY = sigLabelY + 14;
-      addSig(doc, dec(equipo.firma_responsable_rh), L, sigY, SIGW, SIG_H);
-      doc.moveTo(L, sigY + SIG_H).lineTo(L + SIGW, sigY + SIG_H).stroke('#333');
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('black')
-        .text('RESPONSABLE DE RH', L, sigY + SIG_H + 4, { width: SIGW, align: 'center' });
-      if (equipo.nombre_responsable_rh)
-        doc.font('Helvetica').fontSize(8).fillColor('#444')
-          .text(equipo.nombre_responsable_rh, L, sigY + SIG_H + 14, { width: SIGW, align: 'center' });
+  <div class="testigo">
+    <p style="font-weight:bold;margin-bottom:32px">TESTIGO</p>
+    ${firmaAud ? `<img class="testigo-img" src="${firmaAud}" alt="Firma auditor">` : '<div class="testigo-line"></div>'}
+    <p style="font-weight:bold;margin-top:6px">AUDITOR</p>
+    ${rev.auditor_nombre ? `<p style="font-size:12px;color:#555;margin-top:2px">${rev.auditor_nombre}</p>` : ''}
+  </div>
 
-      addSig(doc, dec(equipo.firma_empleado), rhX, sigY, SIGW, SIG_H);
-      doc.moveTo(rhX, sigY + SIG_H).lineTo(rhX + SIGW, sigY + SIG_H).stroke('#333');
-      doc.font('Helvetica').fontSize(8.5).fillColor('black')
-        .text(`Nombre: ${nombreEmp}`, rhX, sigY + SIG_H + 4, { width: SIGW, align: 'center' })
-        .text(`Puesto: ${puesto}`, rhX, sigY + SIG_H + 14, { width: SIGW, align: 'center' });
-
-      // TESTIGO centrado
-      doc.y = sigY + SIG_H + 30;
-      const TESTI_W = 200, testiX = L + (W - TESTI_W) / 2;
-      doc.font('Helvetica-Bold').fontSize(10).text('TESTIGO', testiX, doc.y, { width: TESTI_W, align: 'center' });
-      const testiY = doc.y + 14;
-      addSig(doc, dec(equipo.firma_auditor), testiX, testiY, TESTI_W, 50);
-      doc.moveTo(testiX, testiY + 50).lineTo(testiX + TESTI_W, testiY + 50).stroke('#333');
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('black')
-        .text('AUDITOR', testiX, testiY + 53, { width: TESTI_W, align: 'center' });
-      if (rev.auditor_nombre)
-        doc.font('Helvetica').fontSize(8).fillColor('#444')
-          .text(rev.auditor_nombre, testiX, testiY + 63, { width: TESTI_W, align: 'center' });
-
-      doc.y = testiY + 80;
-      doc.fillColor('black').strokeColor('black');
-
-      // Pie de seguridad
-      doc.moveDown(0.4);
-      doc.moveTo(L, doc.y).lineTo(L + W, doc.y).stroke('#ccc');
-      doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(6.5).fillColor('#666')
-        .text(
-          `Folio: ${fol}  ·  Generado: ${fmtFull(rev.fecha_revision)}${equipo.nombre_responsable_rh ? '  ·  RH: ' + equipo.nombre_responsable_rh : ''}`,
-          { align: 'center' }
-        )
-        .text('Documento generado por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF.', { align: 'center' });
-
-      doc.fillColor('black').font('Helvetica');
-      doc.end();
-    } catch (err) { reject(err); }
-  });
+  <div class="footer">
+    <p><strong>Validez y autenticidad del documento</strong></p>
+    <p>Folio: <strong>${fol}</strong> · Generado: ${fmtFull(rev.fecha_revision)}</p>
+    ${nombreRH ? `<p>Responsable RH: ${nombreRH}</p>` : ''}
+    <p style="margin-top:4px">Documento generado digitalmente por el Sistema de Control de Herramienta — Cadena Comercial OXXO. Firmas electrónicas con validez conforme al Art. 1803 CCF.</p>
+  </div>
+</div>
+</body></html>`;
 }
+
 
 function buildResumenPDF(rev, rawAuto, rawEquipo) {
   return new Promise((resolve, reject) => {
@@ -660,25 +587,28 @@ async function runGenerarZip(jobId, params) {
 
       // Carta Auto + fotos
       if (rawAuto) {
-        const autoBuf = await buildAutoPDF(revObj, rawAuto);
-        entries.push({ p: `${folder}/Carta_Auto.pdf`, buf: autoBuf });
+        const autoHtml = buildAutoHTML(revObj, rawAuto);
+        entries.push({ p: `${folder}/Carta_Auto.html`, buf: Buffer.from(autoHtml, 'utf-8') });
 
-        const condFotos = decryptArr(Array.isArray(rawAuto.foto_condiciones) ? rawAuto.foto_condiciones : []);
+        // foto_condiciones: JSONB → array (defensive parse si pg devuelve string)
+        let rawFotos = rawAuto.foto_condiciones;
+        if (typeof rawFotos === 'string') { try { rawFotos = JSON.parse(rawFotos); } catch { rawFotos = []; } }
+        const condFotos = decryptArr(Array.isArray(rawFotos) ? rawFotos : []);
         condFotos.forEach((f, i) => {
           const buf = dataUrlToBuffer(f);
           if (buf) entries.push({ p: `${folder}/foto_condicion_${String(i + 1).padStart(2, '0')}.jpg`, buf });
         });
 
         [
-          ['foto_licencia.jpg', rawAuto.foto_licencia],
-          ['foto_licencia_reverso.jpg', rawAuto.foto_licencia_reverso],
-          ['foto_tarjeta_circulacion.jpg', rawAuto.foto_tarjeta_circulacion],
-          ['foto_poliza_seguro.jpg', rawAuto.foto_poliza_seguro],
-          ['foto_llanta_refaccion.jpg', rawAuto.foto_llanta_refaccion],
+          ['foto_licencia.jpg',           rawAuto.foto_licencia],
+          ['foto_licencia_reverso.jpg',   rawAuto.foto_licencia_reverso],
+          ['foto_tarjeta_circulacion.jpg',rawAuto.foto_tarjeta_circulacion],
+          ['foto_poliza_seguro.jpg',      rawAuto.foto_poliza_seguro],
+          ['foto_llanta_refaccion.jpg',   rawAuto.foto_llanta_refaccion],
         ].forEach(([name, enc]) => {
-          const decrypted = dec(enc);
-          if (decrypted) {
-            const buf = dataUrlToBuffer(decrypted);
+          const val = dec(enc);
+          if (val) {
+            const buf = dataUrlToBuffer(val);
             if (buf) entries.push({ p: `${folder}/${name}`, buf });
           }
         });
@@ -686,8 +616,8 @@ async function runGenerarZip(jobId, params) {
 
       // Carta Equipo + foto
       if (rawEquipo) {
-        const equipoBuf = await buildEquipoPDF(revObj, rawEquipo);
-        entries.push({ p: `${folder}/Carta_Equipo.pdf`, buf: equipoBuf });
+        const equipoHtml = buildEquipoHTML(revObj, rawEquipo, revObj._ciudad || '');
+        entries.push({ p: `${folder}/Carta_Equipo.html`, buf: Buffer.from(equipoHtml, 'utf-8') });
 
         const fotoEquipo = dec(rawEquipo.foto_equipo);
         if (fotoEquipo) {
