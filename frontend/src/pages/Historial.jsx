@@ -26,9 +26,10 @@ export default function Historial() {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('sich-historial-view') || 'lista');
   const [exportMsg, setExportMsg] = useState(null);
   const [canExportResponsivas, setCanExportResponsivas] = useState(false);
-  const [canReopenRevision, setCanReopenRevision] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null); // revision id to delete
-  const [deleting, setDeleting] = useState(false);
+  const [canEditRevision, setCanEditRevision] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ observaciones: '', auto: null, equipo: null });
+  const [editSaving, setEditSaving] = useState(false);
   const [zipJob, setZipJob] = useState(null); // { jobId, status, current, total }
   const pollRef = useRef(null);
 
@@ -37,7 +38,7 @@ export default function Historial() {
       .then(r => setCanExportResponsivas(r.data.canExport === true))
       .catch(() => {});
     api.get('/admin/reabrir-revision-roles')
-      .then(r => setCanReopenRevision(r.data.canReabrir === true))
+      .then(r => setCanEditRevision(r.data.canReabrir === true))
       .catch(() => {});
   }, [user]);
 
@@ -132,19 +133,42 @@ export default function Historial() {
   const verDetalle = async (id) => {
     const r = await api.get(`/revisiones/${id}`);
     setSelected(r.data);
+    setEditMode(false);
   };
 
-  const eliminarRevision = async () => {
-    if (!confirmDelete) return;
-    setDeleting(true);
+  const openEdit = (rev) => {
+    setEditForm({
+      observaciones: rev.observaciones || '',
+      auto: rev.auto ? {
+        placas: rev.auto.placas || '',
+        no_serie: rev.auto.no_serie || '',
+        no_modelo: rev.auto.no_modelo || '',
+        kilometraje: rev.auto.kilometraje || '',
+        comentarios: rev.auto.comentarios || '',
+      } : null,
+      equipo: rev.equipo ? {
+        codigo_barras: rev.equipo.codigo_barras || '',
+        marca: rev.equipo.marca || '',
+        modelo: rev.equipo.modelo || '',
+        serie: rev.equipo.serie || '',
+        comentarios: rev.equipo.comentarios || '',
+      } : null,
+    });
+    setEditMode(true);
+  };
+
+  const saveEdit = async () => {
+    if (!selected) return;
+    setEditSaving(true);
     try {
-      await api.delete(`/revisiones/${confirmDelete}`);
-      setConfirmDelete(null);
-      setSelected(null);
+      await api.patch(`/revisiones/${selected.id}`, editForm);
+      const r = await api.get(`/revisiones/${selected.id}`);
+      setSelected(r.data);
+      setEditMode(false);
       cargar();
     } catch (err) {
-      alert(err.response?.data?.error || 'Error al eliminar');
-    } finally { setDeleting(false); }
+      alert(err.response?.data?.error || 'Error al guardar cambios');
+    } finally { setEditSaving(false); }
   };
 
   const fmtFecha = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -474,27 +498,72 @@ export default function Historial() {
               </div>
             )}
           </div>
-          {canReopenRevision && (
-            <div className="pt-3 border-t border-gray-100">
-              {confirmDelete === selected.id ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
-                  <p className="text-sm text-red-700 font-semibold">¿Eliminar este registro permanentemente?</p>
-                  <p className="text-xs text-red-600">Esta acción no se puede deshacer. El registro podrá capturarse nuevamente.</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => setConfirmDelete(null)} className="btn-secondary flex-1 text-sm py-1.5">Cancelar</button>
-                    <button onClick={eliminarRevision} disabled={deleting} className="flex-1 text-sm py-1.5 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-colors disabled:opacity-50">
-                      {deleting ? 'Eliminando...' : 'Sí, eliminar'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={() => setConfirmDelete(selected.id)}
-                  className="text-xs text-red-600 hover:text-red-800 underline transition-colors">
-                  🗑 Eliminar este registro
-                </button>
-              )}
+        )}
+        {selected && canEditRevision && !editMode && (
+          <div className="pt-3 border-t border-gray-100">
+            <button onClick={() => openEdit(selected)}
+              className="text-xs bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+              ✏️ Corregir datos de este registro
+            </button>
+          </div>
+        )}
+        {selected && editMode && (
+          <div className="pt-3 border-t border-gray-100 space-y-3">
+            <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ✏️ Modo edición — Solo modifica datos incorrectos. Las firmas y fotos no se modifican.
+            </p>
+            <div>
+              <label className="label text-xs">Observaciones generales</label>
+              <textarea className="input text-sm" rows={2} value={editForm.observaciones}
+                onChange={e => setEditForm(f => ({ ...f, observaciones: e.target.value }))} />
             </div>
-          )}
+            {editForm.auto && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-blue-700">🚗 Auto</p>
+                {[
+                  ['Placas', 'placas'], ['No. Serie', 'no_serie'],
+                  ['Modelo', 'no_modelo'], ['Kilometraje', 'kilometraje'],
+                ].map(([lbl, key]) => (
+                  <div key={key}>
+                    <label className="label text-xs">{lbl}</label>
+                    <input className="input text-sm" value={editForm.auto[key]}
+                      onChange={e => setEditForm(f => ({ ...f, auto: { ...f.auto, [key]: e.target.value } }))} />
+                  </div>
+                ))}
+                <div>
+                  <label className="label text-xs">Comentarios auto</label>
+                  <textarea className="input text-sm" rows={2} value={editForm.auto.comentarios}
+                    onChange={e => setEditForm(f => ({ ...f, auto: { ...f.auto, comentarios: e.target.value } }))} />
+                </div>
+              </div>
+            )}
+            {editForm.equipo && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-purple-700">💻 Equipo</p>
+                {[
+                  ['Código barras', 'codigo_barras'], ['Marca', 'marca'],
+                  ['Modelo', 'modelo'], ['No. Serie', 'serie'],
+                ].map(([lbl, key]) => (
+                  <div key={key}>
+                    <label className="label text-xs">{lbl}</label>
+                    <input className="input text-sm" value={editForm.equipo[key]}
+                      onChange={e => setEditForm(f => ({ ...f, equipo: { ...f.equipo, [key]: e.target.value } }))} />
+                  </div>
+                ))}
+                <div>
+                  <label className="label text-xs">Comentarios equipo</label>
+                  <textarea className="input text-sm" rows={2} value={editForm.equipo.comentarios}
+                    onChange={e => setEditForm(f => ({ ...f, equipo: { ...f.equipo, comentarios: e.target.value } }))} />
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setEditMode(false)} className="btn-secondary flex-1 text-sm">Cancelar</button>
+              <button onClick={saveEdit} disabled={editSaving} className="btn-primary flex-1 text-sm">
+                {editSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>

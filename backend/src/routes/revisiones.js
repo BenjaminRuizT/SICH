@@ -152,17 +152,38 @@ router.get('/:id', requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
-// Eliminar revisión — solo admin o usuarios con can_reabrir_revision
-router.delete('/:id', requireAuth, async (req, res) => {
+// Editar campos de una revisión — solo admin o usuarios con can_reabrir_revision
+router.patch('/:id', requireAuth, async (req, res) => {
   try {
     const isAdmin = req.user.rol === 'admin';
     if (!isAdmin) {
       const { rows: [u] } = await pool.query('SELECT can_reabrir_revision FROM app_users WHERE id=$1', [req.user.id]);
-      if (!u?.can_reabrir_revision) return res.status(403).json({ error: 'Sin permiso para eliminar revisiones' });
+      if (!u?.can_reabrir_revision) return res.status(403).json({ error: 'Sin permiso para editar revisiones' });
     }
-    const { rows: [rev] } = await pool.query('SELECT id FROM revisiones WHERE id=$1', [req.params.id]);
-    if (!rev) return res.status(404).json({ error: 'Revisión no encontrada' });
-    await pool.query('DELETE FROM revisiones WHERE id=$1', [req.params.id]);
+    const { observaciones, auto, equipo } = req.body;
+    if (observaciones !== undefined) {
+      await pool.query('UPDATE revisiones SET observaciones=$1 WHERE id=$2', [observaciones || null, req.params.id]);
+    }
+    if (auto) {
+      await pool.query(
+        `UPDATE revision_auto SET
+           placas=COALESCE($1,placas), no_serie=COALESCE($2,no_serie), no_modelo=COALESCE($3,no_modelo),
+           kilometraje=COALESCE($4,kilometraje), comentarios=$5
+         WHERE revision_id=$6`,
+        [auto.placas || null, auto.no_serie || null, auto.no_modelo || null,
+         auto.kilometraje || null, auto.comentarios || null, req.params.id]
+      );
+    }
+    if (equipo) {
+      await pool.query(
+        `UPDATE revision_equipo SET
+           codigo_barras=COALESCE($1,codigo_barras), marca=COALESCE($2,marca),
+           modelo=COALESCE($3,modelo), serie=COALESCE($4,serie), comentarios=$5
+         WHERE revision_id=$6`,
+        [equipo.codigo_barras || null, equipo.marca || null, equipo.modelo || null,
+         equipo.serie || null, equipo.comentarios || null, req.params.id]
+      );
+    }
     res.json({ ok: true });
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });

@@ -447,11 +447,11 @@ export default function Configuracion() {
         )}
       </div>
 
-      {/* Permiso para eliminar registros */}
+      {/* Permiso para editar registros */}
       <div className="card space-y-3">
         <h2 className="font-semibold text-gray-700">Corrección de registros</h2>
         <p className="text-sm text-gray-500">
-          Usuarios autorizados para eliminar una revisión cerrada por error. El registro se elimina permanentemente y puede capturarse de nuevo. Los administradores siempre tienen este permiso.
+          Usuarios autorizados para corregir datos capturados por error en revisiones ya cerradas (placas, serie, modelo, kilometraje, comentarios). Las firmas y fotos no se modifican. Los administradores siempre tienen este permiso.
         </p>
         {exportUsersLoading ? (
           <p className="text-sm text-gray-400">Cargando usuarios...</p>
@@ -478,7 +478,7 @@ export default function Configuracion() {
                       type="button"
                       disabled={isSaving}
                       onClick={() => toggleReopenUser(u.id, u.can_reabrir_revision)}
-                      title={active ? 'Quitar permiso' : 'Dar permiso'}
+                      title={active ? 'Quitar permiso de corrección' : 'Dar permiso de corrección'}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
                         active ? 'bg-brand-700' : 'bg-gray-300'
                       }`}
