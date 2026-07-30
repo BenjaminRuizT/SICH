@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../context/AuthContext';
@@ -24,9 +24,10 @@ export default function Historial() {
   const [loading, setLoading] = useState(false);
   const [successBanner, setSuccessBanner] = useState(location.state?.success);
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('sich-historial-view') || 'lista');
-  const [exportingZip, setExportingZip] = useState(false);
   const [exportMsg, setExportMsg] = useState(null);
   const [canExportResponsivas, setCanExportResponsivas] = useState(false);
+  const [zipJob, setZipJob] = useState(null); // { jobId, status, current, total }
+  const pollRef = useRef(null);
 
   useEffect(() => {
     api.get('/admin/exportar-responsivas-roles')
@@ -70,26 +71,57 @@ export default function Historial() {
     } catch { alert('Error al exportar Excel. Intenta de nuevo.'); }
   };
 
-  const exportarZip = async () => {
-    setExportingZip(true); setExportMsg(null);
+  const solicitarZip = async () => {
+    setExportMsg(null);
+    if (pollRef.current) clearInterval(pollRef.current);
     try {
-      const params = new URLSearchParams();
-      if (desde) params.set('desde', desde);
-      if (hasta) params.set('hasta', hasta);
-      const r = await api.get(`/responsivas/completo?${params}`, { responseType: 'blob' });
+      const body = {};
+      if (desde) body.desde = desde;
+      if (hasta) body.hasta = hasta;
+      const r = await api.post('/responsivas/generar', body);
+      const jobId = r.data.jobId;
+      setZipJob({ jobId, status: 'pending', current: 0, total: 0 });
+
+      pollRef.current = setInterval(async () => {
+        try {
+          const estado = await api.get(`/responsivas/estado/${jobId}`);
+          setZipJob(prev => ({ ...prev, ...estado.data }));
+          if (estado.data.status === 'ready' || estado.data.status === 'error') {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        } catch {}
+      }, 2000);
+    } catch (e) {
+      const msg = e.response?.status === 404
+        ? 'Sin revisiones en el rango indicado.'
+        : 'Error al iniciar la generación. Intenta de nuevo.';
+      setExportMsg(msg);
+    }
+  };
+
+  const descargarZip = async () => {
+    if (!zipJob?.jobId) return;
+    try {
+      const r = await api.get(`/responsivas/descargar/${zipJob.jobId}`, { responseType: 'blob' });
       const url = URL.createObjectURL(r.data);
       const a = document.createElement('a');
       a.href = url;
       a.download = `SICHE_Revisiones_${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e) {
-      const msg = e.response?.status === 404
-        ? 'Sin revisiones en el rango indicado.'
-        : 'Error al generar el archivo. Intenta de nuevo.';
-      setExportMsg(msg);
-    } finally { setExportingZip(false); }
+      setZipJob(null);
+    } catch { setExportMsg('Error al descargar. Intenta de nuevo.'); }
   };
+
+  const cancelarZip = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    setZipJob(null);
+  };
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
 
   const verDetalle = async (id) => {
     const r = await api.get(`/revisiones/${id}`);
@@ -132,9 +164,9 @@ export default function Historial() {
             </button>
           )}
           {canExportResponsivas && (
-            <button onClick={exportarZip} disabled={exportingZip}
+            <button onClick={solicitarZip} disabled={!!zipJob && zipJob.status !== 'ready' && zipJob.status !== 'error'}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5">
-              {exportingZip ? 'Generando...' : '📁 Exportar ZIP'}
+              📁 Exportar ZIP
             </button>
           )}
         </div>
@@ -143,6 +175,66 @@ export default function Historial() {
       {exportMsg && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2.5 rounded-xl text-sm">
           {exportMsg}
+        </div>
+      )}
+
+      {zipJob && (
+        <div className={`border rounded-xl p-4 space-y-3 ${
+          zipJob.status === 'error' ? 'bg-red-50 border-red-200' :
+          zipJob.status === 'ready' ? 'bg-green-50 border-green-200' :
+          'bg-indigo-50 border-indigo-200'
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              {zipJob.status === 'pending' && (
+                <p className="text-sm font-semibold text-indigo-800">Iniciando generacion...</p>
+              )}
+              {zipJob.status === 'processing' && (
+                <div>
+                  <p className="text-sm font-semibold text-indigo-800">
+                    Generando carpetas... {zipJob.current} / {zipJob.total}
+                  </p>
+                  <p className="text-xs text-indigo-600">
+                    Esto puede tomar unos segundos. No cierres esta pagina.
+                  </p>
+                </div>
+              )}
+              {zipJob.status === 'ready' && (
+                <p className="text-sm font-semibold text-green-800">
+                  Archivo listo — {zipJob.total} revision{zipJob.total !== 1 ? 'es' : ''} incluida{zipJob.total !== 1 ? 's' : ''}
+                </p>
+              )}
+              {zipJob.status === 'error' && (
+                <p className="text-sm font-semibold text-red-800">
+                  {zipJob.error || 'Error al generar el archivo'}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              {zipJob.status === 'ready' && (
+                <button onClick={descargarZip}
+                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-1.5 rounded-lg">
+                  Descargar ZIP
+                </button>
+              )}
+              <button onClick={cancelarZip}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none px-1">
+                ✕
+              </button>
+            </div>
+          </div>
+          {(zipJob.status === 'pending' || zipJob.status === 'processing') && (
+            <div className="w-full bg-indigo-100 rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
+                style={{
+                  width: zipJob.total > 0
+                    ? `${Math.round((zipJob.current / zipJob.total) * 100)}%`
+                    : '8%'
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
