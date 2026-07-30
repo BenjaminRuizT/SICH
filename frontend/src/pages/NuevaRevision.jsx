@@ -734,16 +734,26 @@ export default function NuevaRevision() {
           {/* Damage panel */}
           <div className="card">
             <p className="label mb-3">Panel de daños — Auto</p>
-            <DamagePanel type="auto" value={autoForm.danos} onChange={v => setAutoForm(p => ({ ...p, danos: v }))} />
+            <DamagePanel type="auto" value={autoForm.danos}
+              onChange={v => setAutoForm(p => ({
+                ...p, danos: v,
+                ...(v.length === 0 ? { foto_condiciones: [] } : {}),
+              }))} />
           </div>
 
-          {/* Photos */}
-          <div>
-            <PhotoCapture label="Fotos de condiciones del auto" multiple maxPhotos={5}
-              onCapture={v => setAutoForm(p => ({ ...p, foto_condiciones: v }))}
-              value={autoForm.foto_condiciones}
-              sublabel="Máximo 5 fotos — opcional" />
-          </div>
+          {/* Photos — solo si hay daños registrados */}
+          {autoForm.danos.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">📸</span>
+                <span>Se requiere evidencia fotográfica de los daños registrados</span>
+              </div>
+              <PhotoCapture label="Fotos de condiciones del auto" multiple maxPhotos={5}
+                onCapture={v => setAutoForm(p => ({ ...p, foto_condiciones: v }))}
+                value={autoForm.foto_condiciones}
+                sublabel="Máximo 5 fotos" />
+            </div>
+          )}
 
           <div>
             <label className="label">Comentarios</label>

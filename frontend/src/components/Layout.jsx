@@ -198,13 +198,13 @@ export default function Layout({ children }) {
   }, []);
 
   useInactivity(async () => { await logout(); navigate('/login'); }, inactivityMs);
-  const updateAvailable = useVersionCheck();
+  const updateState = useVersionCheck();
 
   return (
     <div className="min-h-screen flex flex-col">
       {showPwdModal && <CambiarPasswordModal onClose={() => setShowPwdModal(false)} onSuccess={async () => { await logout(); navigate('/login'); }} />}
       {/* Update banner */}
-      {updateAvailable && (
+      {updateState === 'available' && (
         <div className="bg-amber-400 text-amber-900 text-sm font-semibold px-4 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-50 shadow">
           <span>🔄 Nueva versión disponible</span>
           <button
@@ -213,6 +213,16 @@ export default function Layout({ children }) {
           >
             Actualizar ahora
           </button>
+        </div>
+      )}
+      {updateState === 'pending' && (
+        <div className="bg-blue-100 text-blue-800 text-sm px-4 py-2 flex items-center gap-3 sticky top-0 z-50 shadow border-b border-blue-200">
+          <svg className="w-4 h-4 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          <span className="font-semibold">Actualizando la aplicación...</span>
+          <span className="text-xs text-blue-600">La nueva versión se cargará en unos momentos</span>
         </div>
       )}
       {/* Top bar */}

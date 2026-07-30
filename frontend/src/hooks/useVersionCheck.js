@@ -1,12 +1,7 @@
 import { useState, useEffect } from 'react';
 import { APP_VERSION } from '../version';
 
-// Guarda { version, at } cuando el usuario hace clic en "Actualizar ahora".
-// Mientras el cliente siga en esa misma versión Y no hayan pasado 10 min,
-// se suprime el banner. Esto cubre el tiempo que Railway tarda en propagar
-// los nuevos archivos estáticos tras haber actualizado el backend.
-const SNOOZE_KEY = 'sich-update-snooze';
-const SNOOZE_MS = 10 * 60 * 1000;
+const PENDING_KEY = 'sich-update-pending';
 
 function parseVer(v) {
   return (v || '0.0.0').split('.').map(Number);
@@ -22,36 +17,36 @@ function isServerNewer(serverVersion) {
   return false;
 }
 
-function isSnoozed() {
-  try {
-    const raw = localStorage.getItem(SNOOZE_KEY);
-    if (!raw) return false;
-    const { version, at } = JSON.parse(raw);
-    return version === APP_VERSION && Date.now() - at < SNOOZE_MS;
-  } catch { return false; }
-}
-
+// Cuando el usuario hace clic en "Actualizar ahora", marcamos pending y recargamos.
+// En la recarga, si la versión sigue siendo vieja (Railway aún construyendo),
+// mostramos "actualizando..." en lugar del botón — así no confunde al usuario.
+// Cuando la versión del cliente ya coincida con el servidor se limpia el flag.
 export function markReload() {
-  try {
-    localStorage.setItem(SNOOZE_KEY, JSON.stringify({ version: APP_VERSION, at: Date.now() }));
-  } catch {}
+  try { localStorage.setItem(PENDING_KEY, '1'); } catch {}
 }
 
+// Retorna: 'idle' | 'available' | 'pending'
 export default function useVersionCheck() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [state, setState] = useState('idle');
 
   useEffect(() => {
     const check = async () => {
-      if (isSnoozed()) return;
       try {
         const r = await fetch('/api/version', { cache: 'no-store' });
         const { version } = await r.json();
-        if (version && isServerNewer(version)) setUpdateAvailable(true);
+        if (version && isServerNewer(version)) {
+          const pending = localStorage.getItem(PENDING_KEY) === '1';
+          setState(pending ? 'pending' : 'available');
+        } else {
+          // La versión del cliente ya coincide — actualización completa
+          try { localStorage.removeItem(PENDING_KEY); } catch {}
+          setState('idle');
+        }
       } catch {}
     };
 
     check();
-    const id = setInterval(check, 60 * 1000);
+    const id = setInterval(check, 30 * 1000);
 
     const onVisible = () => { if (document.visibilityState === 'visible') check(); };
     document.addEventListener('visibilitychange', onVisible);
@@ -62,5 +57,5 @@ export default function useVersionCheck() {
     };
   }, []);
 
-  return updateAvailable;
+  return state;
 }

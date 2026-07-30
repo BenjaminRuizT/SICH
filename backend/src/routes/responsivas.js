@@ -63,9 +63,14 @@ function safeFilename(name) {
 function dataUrlToBuffer(dataUrl) {
   if (!dataUrl || typeof dataUrl !== 'string') return null;
   try {
-    const match = dataUrl.match(/^data:[^;]+;base64,(.+)/s);
-    if (!match || !match[1]) return null;
-    return Buffer.from(match[1].trim(), 'base64');
+    // Robust: find the comma that separates data URL header from data
+    const commaIdx = dataUrl.indexOf(',');
+    if (commaIdx < 0) return null;
+    const header = dataUrl.slice(0, commaIdx);
+    if (!header.startsWith('data:') || !header.includes('base64')) return null;
+    const b64 = dataUrl.slice(commaIdx + 1);
+    if (!b64) return null;
+    return Buffer.from(b64, 'base64');
   } catch { return null; }
 }
 
@@ -173,6 +178,7 @@ u{text-decoration:underline;padding:0 2px}
 </head>
 <body>
 <button class="btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});</script>
 
 <div class="page page-break">
   ${headerTable('1')}
@@ -299,6 +305,7 @@ u{text-decoration:underline;padding:0 4px;display:inline-block;min-width:120px}
 </head>
 <body>
 <button class="btn" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});</script>
 
 <div class="page">
   <div style="display:flex;align-items:center;margin-bottom:40px">
