@@ -17,6 +17,7 @@ import Documentacion from './pages/admin/Documentacion';
 import CartaResponsivaAuto from './pages/CartaResponsivaAuto';
 import CartaResponsivaEquipo from './pages/CartaResponsivaEquipo';
 import Verificar from './pages/Verificar';
+import Manual from './pages/Manual';
 
 function AuthGuard({ children, adminOnly = false, noLayout = false }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,7 @@ function AppRoutes() {
       <Route path="/admin/configuracion" element={<AuthGuard adminOnly><Configuracion /></AuthGuard>} />
       <Route path="/admin/reset" element={<AuthGuard adminOnly><ResetApp /></AuthGuard>} />
       <Route path="/admin/documentacion" element={<AuthGuard adminOnly><Documentacion /></AuthGuard>} />
+      <Route path="/manual" element={<AuthGuard><Manual /></AuthGuard>} />
       {/* Cartas responsivas — print pages, sin sidebar */}
       <Route path="/carta/auto/:id" element={<AuthGuard noLayout><CartaResponsivaAuto /></AuthGuard>} />
       <Route path="/carta/equipo/:id" element={<AuthGuard noLayout><CartaResponsivaEquipo /></AuthGuard>} />

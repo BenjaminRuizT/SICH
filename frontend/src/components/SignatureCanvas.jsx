@@ -5,7 +5,11 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
   const drawing = useRef(false);
   const autoSaveTimer = useRef(null);
   const dprRef = useRef(1);
+  const onSaveRef = useRef(onSave);
   const [signed, setSigned] = useState(false);
+
+  // Keep ref in sync without triggering effect re-runs
+  useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
   const autoSave = useCallback(() => {
     clearTimeout(autoSaveTimer.current);
@@ -19,9 +23,9 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
       ctx2.fillStyle = '#ffffff';
       ctx2.fillRect(0, 0, tmp.width, tmp.height);
       ctx2.drawImage(canvas, 0, 0);
-      onSave(tmp.toDataURL('image/jpeg', 0.92));
+      onSaveRef.current(tmp.toDataURL('image/jpeg', 0.92));
     }, 800);
-  }, [onSave]);
+  }, []); // stable — no deps, uses ref internally
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,14 +80,14 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
       canvas.removeEventListener('touchend', end);
       clearTimeout(autoSaveTimer.current);
     };
-  }, [autoSave]);
+  }, [autoSave]); // autoSave is now stable — this runs only once on mount
 
   const clear = () => {
     clearTimeout(autoSaveTimer.current);
     const canvas = canvasRef.current;
     canvas.getContext('2d').clearRect(0, 0, canvas.offsetWidth, 160);
     setSigned(false);
-    onSave(null);
+    onSaveRef.current(null);
   };
 
   return (

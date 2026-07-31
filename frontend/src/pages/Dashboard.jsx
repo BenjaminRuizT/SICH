@@ -125,6 +125,17 @@ export default function Dashboard() {
             <span className="text-2xl">⚙️</span> Administración
           </button>
         )}
+
+        <button
+          onClick={() => navigate('/manual')}
+          className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 border-gray-200 hover:border-teal-400 bg-white hover:bg-teal-50 transition-all"
+        >
+          <span className="text-2xl shrink-0">📖</span>
+          <div>
+            <p className="font-semibold text-gray-800 text-sm">Manual de usuario</p>
+            <p className="text-xs text-gray-500">Guía de funciones, revisiones y confidencialidad</p>
+          </div>
+        </button>
       </div>
     </div>
   );
