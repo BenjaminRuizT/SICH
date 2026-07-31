@@ -25,6 +25,7 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
               ra.danos as danos_auto,
               re.codigo_barras as cb_equipo, re.marca as marca_equipo,
               re.modelo as modelo_equipo, re.serie as serie_equipo,
+              re.comentarios as comentarios_equipo,
               re.danos as danos_equipo
              FROM revisiones r
              LEFT JOIN empleados e ON r.empleado_id=e.id
@@ -62,6 +63,7 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
       { header: 'Marca Equipo', key: 'marca_equipo', width: 15 },
       { header: 'Modelo Equipo', key: 'modelo_equipo', width: 15 },
       { header: 'Serie Equipo', key: 'serie_equipo', width: 20 },
+      { header: 'Comentarios Equipo', key: 'comentarios_equipo', width: 30 },
       { header: 'Daños Equipo', key: 'danos_equipo_desc', width: 40 },
       { header: 'Estatus', key: 'status', width: 12 },
       { header: 'Observaciones', key: 'observaciones', width: 35 },
@@ -96,6 +98,7 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
         marca_equipo:     safe(r.marca_equipo),
         modelo_equipo:    safe(r.modelo_equipo),
         serie_equipo:     safe(r.serie_equipo),
+        comentarios_equipo: safe(r.comentarios_equipo),
         danos_equipo_desc: parseDanos(r.danos_equipo),
         observaciones:    safe(r.observaciones),
         tiene_auto: r.tiene_auto ? 'Sí' : 'No',

@@ -568,12 +568,15 @@ async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
     { header: 'Gato/Cruceta',   key: 'gato',         width: 13 },
     { header: 'Tarjeta Circ.',  key: 'tarjeta',      width: 13 },
     { header: 'Daños Auto',     key: 'danos_auto',   width: 40 },
+    { header: 'Coment. Auto',  key: 'coments_auto', width: 30 },
     { header: 'Equipo',         key: 'tiene_equipo', width: 8  },
     { header: 'CB Equipo',      key: 'cb_equipo',    width: 15 },
     { header: 'Marca',          key: 'marca',        width: 15 },
     { header: 'Modelo',         key: 'modelo',       width: 15 },
     { header: 'Serie Equipo',   key: 'serie_equipo', width: 20 },
     { header: 'Daños Equipo',   key: 'danos_equipo', width: 40 },
+    { header: 'Coment. Equipo', key: 'coments_equipo', width: 30 },
+    { header: 'Observaciones',  key: 'observaciones',  width: 35 },
   ];
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134e4a' } };
@@ -606,13 +609,16 @@ async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
       llanta:       ra ? yn(ra.llanta_refaccion)   : '',
       gato:         ra ? yn(ra.gato_cruceta)       : '',
       tarjeta:      ra ? yn(ra.tarjeta_circulacion): '',
-      danos_auto:   autoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
-      tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',
-      cb_equipo:    re ? safe(re.codigo_barras) : '',
-      marca:        re ? safe(re.marca)         : '',
-      modelo:       re ? safe(re.modelo)        : '',
-      serie_equipo: re ? safe(re.serie)         : '',
-      danos_equipo: equipoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
+      danos_auto:    autoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
+      coments_auto:  ra ? safe(ra.comentarios) : '',
+      tiene_equipo:  r.tiene_equipo ? 'Sí' : 'No',
+      cb_equipo:     re ? safe(re.codigo_barras) : '',
+      marca:         re ? safe(re.marca)         : '',
+      modelo:        re ? safe(re.modelo)        : '',
+      serie_equipo:  re ? safe(re.serie)         : '',
+      danos_equipo:  equipoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
+      coments_equipo: re ? safe(re.comentarios) : '',
+      observaciones:  safe(r.observaciones || ''),
     });
   }
   return Buffer.from(await wb.xlsx.writeBuffer());
@@ -637,7 +643,7 @@ async function runGenerarZip(jobId, params, authToken) {
     const { desde, hasta } = params;
 
     let q = `SELECT r.id, r.fecha_revision, r.auditor_nombre, r.empleado_snapshot,
-              r.tiene_auto, r.tiene_equipo,
+              r.tiene_auto, r.tiene_equipo, r.observaciones,
               cfg.value AS ciudad
              FROM revisiones r
              LEFT JOIN app_config cfg ON cfg.key = 'ciudad_revision'

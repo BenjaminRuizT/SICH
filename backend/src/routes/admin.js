@@ -516,4 +516,45 @@ router.delete('/usuarios-bloqueados/:username', requireAdmin, async (req, res) =
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
+// ---------------------------------------------------------------------------
+// Logs — historial de sesiones y actividad
+// ---------------------------------------------------------------------------
+
+router.get('/logs/sesiones', requireAdmin, async (req, res) => {
+  try {
+    const { desde, hasta, limit = 200 } = req.query;
+    let q = `SELECT l.id, l.username, l.event, l.ip, l.user_agent, l.created_at,
+                    u.nombre
+             FROM auth_log l
+             LEFT JOIN app_users u ON u.id = l.app_user_id
+             WHERE 1=1`;
+    const params = [];
+    if (desde) { params.push(desde); q += ` AND l.created_at >= $${params.length}`; }
+    if (hasta) { params.push(hasta); q += ` AND l.created_at <= $${params.length}`; }
+    params.push(Math.min(parseInt(limit) || 200, 500));
+    q += ` ORDER BY l.created_at DESC LIMIT $${params.length}`;
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
+router.get('/logs/actividad', requireAdmin, async (req, res) => {
+  try {
+    const { desde, hasta, limit = 200 } = req.query;
+    let q = `SELECT r.id, r.created_at, r.fecha_revision, r.auditor_nombre,
+                    r.status, r.tiene_auto, r.tiene_equipo,
+                    e.nombre_completo, e.numero_empleado, e.plaza
+             FROM revisiones r
+             LEFT JOIN empleados e ON r.empleado_id = e.id
+             WHERE 1=1`;
+    const params = [];
+    if (desde) { params.push(desde); q += ` AND r.created_at >= $${params.length}`; }
+    if (hasta) { params.push(hasta); q += ` AND r.created_at <= $${params.length}`; }
+    params.push(Math.min(parseInt(limit) || 200, 500));
+    q += ` ORDER BY r.created_at DESC LIMIT $${params.length}`;
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
 module.exports = router;

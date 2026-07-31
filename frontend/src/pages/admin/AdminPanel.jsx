@@ -7,6 +7,7 @@ const ITEMS = [
   { to: '/admin/importar',       label: '📥 Importar datos',        desc: 'Cargar MAF y plantilla desde Excel o JSON' },
   { to: '/admin/configuracion',  label: '⚙️ Configuración',         desc: 'Tiempo de inactividad y parámetros del sistema' },
   { to: '/admin/reset',          label: '🗑 Resetear aplicación',   desc: 'Borrar datos con opciones de conservación' },
+  { to: '/admin/logs',           label: '📊 Logs del sistema',      desc: 'Historial de sesiones de usuario y actividad de revisiones' },
   { to: '/admin/documentacion',  label: '📄 Documentación técnica', desc: 'Documentación del sistema para auditorías y presentaciones — exportable a PDF' },
 ];
 
