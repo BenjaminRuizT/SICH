@@ -182,6 +182,8 @@ export default function Layout({ children }) {
   const nav = isAdmin ? NAV_ADMIN : NAV_AUDITOR;
   const [inactivityMs, setInactivityMs] = useState(20 * 60 * 1000);
   const [showPwdModal, setShowPwdModal] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sich-theme');
@@ -195,6 +197,23 @@ export default function Layout({ children }) {
       if (!isNaN(mins) && mins > 0) setInactivityMs(mins * 60000);
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const checkVersion = () => {
+      fetch('/api/version').then(r => r.json()).then(({ version }) => {
+        if (version && version !== APP_VERSION) setUpdateAvailable(true);
+      }).catch(() => {});
+    };
+    checkVersion();
+    const id = setInterval(checkVersion, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleUpdate = async () => {
+    setUpdating(true);
+    try { await fetch('/api/force-refresh'); } catch {}
+    window.location.reload();
+  };
 
   useInactivity(async () => { await logout(); navigate('/login'); }, inactivityMs);
 
@@ -229,6 +248,20 @@ export default function Layout({ children }) {
           </div>
         </div>
       </header>
+
+      {/* Update banner */}
+      {updateAvailable && (
+        <div className="sticky top-14 z-[39] bg-amber-400 text-amber-900 flex items-center justify-between px-4 py-2.5 text-sm font-medium shadow-md">
+          <span>Nueva version disponible. Actualiza para obtener las ultimas mejoras.</span>
+          <button
+            onClick={handleUpdate}
+            disabled={updating}
+            className="ml-4 bg-amber-900 text-amber-50 hover:bg-amber-800 disabled:opacity-60 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            {updating ? 'Actualizando...' : 'Actualizar ahora'}
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <main className="flex-1 max-w-screen-xl mx-auto w-full px-4 py-6 pb-24 md:pb-6">

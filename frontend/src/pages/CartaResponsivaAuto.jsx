@@ -180,7 +180,8 @@ export default function CartaResponsivaAuto() {
                 <span>CB: <strong>{auto.codigo_barras || '—'}</strong></span>
                 <span>Km: <strong>{auto.kilometraje || '—'}</strong></span>
                 <span>Póliza de seguro: <strong>{yesno(auto.poliza_seguro)}</strong></span>
-                <span>Licencia vigente: <strong>{yesno(auto.licencia)}</strong></span>
+                <span>Licencia vigente: <strong>{yesno(auto.licencia_numero)}</strong></span>
+                <span>Tarjeta de circulación: <strong>{yesno(auto.tarjeta_circulacion)}</strong></span>
                 <span>Llanta refacción: <strong>{yesno(auto.llanta_refaccion)}</strong></span>
                 <span>Gato / Cruceta: <strong>{yesno(auto.gato_cruceta)}</strong></span>
                 <span>Revisión: <strong>{fmtFull(rev.fecha_revision)}</strong></span>
