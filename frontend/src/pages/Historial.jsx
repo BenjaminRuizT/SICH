@@ -260,15 +260,10 @@ export default function Historial() {
                 <p className="text-sm font-semibold text-indigo-800">Iniciando generacion...</p>
               )}
               {zipJob.status === 'processing' && (
-                <div>
-                  <p className="text-sm font-semibold text-indigo-800">
-                    Generando carpetas... {zipJob.current} / {zipJob.total}
-                    {zipJob.total > 0 && ` (${Math.round((zipJob.current / zipJob.total) * 100)}%)`}
-                  </p>
-                  <p className="text-xs text-indigo-600">
-                    Esto puede tomar unos segundos. No cierres esta pagina.
-                  </p>
-                </div>
+                <p className="text-sm font-semibold text-indigo-800">
+                  Generando carpetas... {zipJob.current} / {zipJob.total}
+                  {zipJob.total > 0 && ` (${Math.round((zipJob.current / zipJob.total) * 100)}%)`}
+                </p>
               )}
               {zipJob.status === 'ready' && (
                 <p className="text-sm font-semibold text-green-800">
