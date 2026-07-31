@@ -387,6 +387,8 @@ async function cartaToPDF(browser, path, authToken) {
     await page.setCookie({ name: 'siche_token', value: authToken, domain: 'localhost', path: '/' });
     await page.emulateMediaType('print');
     await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle2', timeout: 30000 });
+    // Wait for all async state (hash, ciudadConfig, signatures) to finish rendering
+    await page.waitForSelector('body[data-carta-ready="1"]', { timeout: 10000 });
     // puppeteer-core 22+ returns Uint8Array; convert to Buffer for archiver compatibility
     return Buffer.from(await page.pdf({ format: 'A4', printBackground: true }));
   } finally {
@@ -565,13 +567,13 @@ async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
     { header: 'Llanta Ref.',    key: 'llanta',       width: 12 },
     { header: 'Gato/Cruceta',   key: 'gato',         width: 13 },
     { header: 'Tarjeta Circ.',  key: 'tarjeta',      width: 13 },
-    { header: 'Daños Auto',     key: 'danos_auto',   width: 12 },
+    { header: 'Daños Auto',     key: 'danos_auto',   width: 40 },
     { header: 'Equipo',         key: 'tiene_equipo', width: 8  },
     { header: 'CB Equipo',      key: 'cb_equipo',    width: 15 },
     { header: 'Marca',          key: 'marca',        width: 15 },
     { header: 'Modelo',         key: 'modelo',       width: 15 },
     { header: 'Serie Equipo',   key: 'serie_equipo', width: 20 },
-    { header: 'Daños Equipo',   key: 'danos_equipo', width: 13 },
+    { header: 'Daños Equipo',   key: 'danos_equipo', width: 40 },
   ];
   ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
   ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134e4a' } };
@@ -583,8 +585,9 @@ async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
     const emp = (r.empleado_snapshot && typeof r.empleado_snapshot === 'object') ? r.empleado_snapshot : {};
     const ra = autoByRevId[r.id];
     const re = equipoByRevId[r.id];
-    const autoDanos = ra && Array.isArray(ra.danos) ? ra.danos.length : 0;
-    const equipoDanos = re && Array.isArray(re.danos) ? re.danos.length : 0;
+    const parseDanosArr = (raw) => { try { const a = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(a) ? a : []; } catch { return []; } };
+    const autoDanosArr = ra ? parseDanosArr(ra.danos) : [];
+    const equipoDanosArr = re ? parseDanosArr(re.danos) : [];
     ws.addRow({
       folio:        folio(r.id),
       fecha:        r.fecha_revision ? new Date(r.fecha_revision).toLocaleString('es-MX', { timeZone: TZ }) : '',
@@ -603,13 +606,13 @@ async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
       llanta:       ra ? yn(ra.llanta_refaccion)   : '',
       gato:         ra ? yn(ra.gato_cruceta)       : '',
       tarjeta:      ra ? yn(ra.tarjeta_circulacion): '',
-      danos_auto:   autoDanos > 0 ? `${autoDanos} daño(s)` : '',
+      danos_auto:   autoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
       tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',
       cb_equipo:    re ? safe(re.codigo_barras) : '',
       marca:        re ? safe(re.marca)         : '',
       modelo:       re ? safe(re.modelo)        : '',
       serie_equipo: re ? safe(re.serie)         : '',
-      danos_equipo: equipoDanos > 0 ? `${equipoDanos} daño(s)` : '',
+      danos_equipo: equipoDanosArr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ') || '',
     });
   }
   return Buffer.from(await wb.xlsx.writeBuffer());

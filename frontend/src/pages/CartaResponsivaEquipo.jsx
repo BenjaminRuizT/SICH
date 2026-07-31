@@ -21,9 +21,10 @@ export default function CartaResponsivaEquipo() {
   const [loading, setLoading] = useState(true);
   const [hash, setHash] = useState('');
   const [ciudadConfig, setCiudadConfig] = useState('');
+  const [ciudadLoaded, setCiudadLoaded] = useState(false);
 
   useEffect(() => {
-    api.get('/config').then(r => setCiudadConfig(r.data.ciudad_revision || '')).catch(() => {});
+    api.get('/config').then(r => setCiudadConfig(r.data.ciudad_revision || '')).catch(() => {}).finally(() => setCiudadLoaded(true));
     api.get(`/revisiones/${id}`).then(async r => {
       const data = r.data;
       if (data.equipo) {
@@ -39,6 +40,12 @@ export default function CartaResponsivaEquipo() {
       setHash(h);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && hash && ciudadLoaded) {
+      document.body.setAttribute('data-carta-ready', '1');
+    }
+  }, [loading, hash, ciudadLoaded]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Cargando...</div>;
   if (!rev || !rev.equipo) return <div className="min-h-screen flex items-center justify-center text-red-500">Carta no disponible</div>;

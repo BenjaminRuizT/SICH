@@ -22,8 +22,10 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
               e.numero_empleado, e.nombre_completo, e.posicion, e.departamento, e.plaza,
               ra.placas, ra.no_serie, ra.kilometraje, ra.poliza_seguro,
               ra.licencia_numero, ra.llanta_refaccion, ra.comentarios as comentarios_auto,
+              ra.danos as danos_auto,
               re.codigo_barras as cb_equipo, re.marca as marca_equipo,
-              re.modelo as modelo_equipo, re.serie as serie_equipo
+              re.modelo as modelo_equipo, re.serie as serie_equipo,
+              re.danos as danos_equipo
              FROM revisiones r
              LEFT JOIN empleados e ON r.empleado_id=e.id
              LEFT JOIN revision_auto ra ON ra.revision_id=r.id
@@ -54,11 +56,13 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
       { header: 'Licencia', key: 'licencia_numero', width: 15 },
       { header: 'Llanta Refacción', key: 'llanta_refaccion', width: 16 },
       { header: 'Comentarios Auto', key: 'comentarios_auto', width: 30 },
+      { header: 'Daños Auto', key: 'danos_auto_desc', width: 40 },
       { header: 'Equipo Revisado', key: 'tiene_equipo', width: 15 },
       { header: 'CB Equipo', key: 'cb_equipo', width: 15 },
       { header: 'Marca Equipo', key: 'marca_equipo', width: 15 },
       { header: 'Modelo Equipo', key: 'modelo_equipo', width: 15 },
       { header: 'Serie Equipo', key: 'serie_equipo', width: 20 },
+      { header: 'Daños Equipo', key: 'danos_equipo_desc', width: 40 },
       { header: 'Estatus', key: 'status', width: 12 },
       { header: 'Observaciones', key: 'observaciones', width: 35 },
     ];
@@ -68,6 +72,14 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
     const safe = (v) => {
       if (typeof v !== 'string') return v;
       return /^[=+\-@|%]/.test(v) ? `'${v}` : v;
+    };
+    const parseDanos = (raw) => {
+      if (!raw) return '';
+      try {
+        const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (!Array.isArray(arr) || arr.length === 0) return '';
+        return arr.map(d => `${d.label || ''}${d.observacion ? ': ' + d.observacion : ''}`).join(' | ');
+      } catch { return ''; }
     };
     rows.forEach(r => {
       ws.addRow({
@@ -80,9 +92,11 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
         placas:           safe(r.placas),
         no_serie:         safe(r.no_serie),
         comentarios_auto: safe(r.comentarios_auto),
+        danos_auto_desc:  parseDanos(r.danos_auto),
         marca_equipo:     safe(r.marca_equipo),
         modelo_equipo:    safe(r.modelo_equipo),
         serie_equipo:     safe(r.serie_equipo),
+        danos_equipo_desc: parseDanos(r.danos_equipo),
         observaciones:    safe(r.observaciones),
         tiene_auto: r.tiene_auto ? 'Sí' : 'No',
         tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',

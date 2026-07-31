@@ -450,7 +450,7 @@ export default function Historial() {
                     ['Modelo', selected.auto.no_modelo],
                     ['Kilometraje', selected.auto.kilometraje],
                     ['Poliza', selected.auto.poliza_seguro === true || selected.auto.poliza_seguro === 'true' ? 'Si' : selected.auto.poliza_seguro === false || selected.auto.poliza_seguro === 'false' ? 'No' : selected.auto.poliza_seguro || '—'],
-                    ['Licencia', selected.auto.licencia_numero == null ? '—' : selected.auto.licencia_numero ? 'Si' : 'No'],
+                    ['Licencia', selected.auto.licencia_numero === true || selected.auto.licencia_numero === 'true' ? 'Si' : selected.auto.licencia_numero === false || selected.auto.licencia_numero === 'false' ? 'No' : '—'],
                     ['Tarjeta circ.', selected.auto.tarjeta_circulacion == null ? '—' : selected.auto.tarjeta_circulacion ? 'Si' : 'No'],
                     ['Llanta ref.', selected.auto.llanta_refaccion == null ? '—' : selected.auto.llanta_refaccion ? 'Si' : 'No'],
                     ['Gato/Cruceta', selected.auto.gato_cruceta == null ? '—' : selected.auto.gato_cruceta ? 'Si' : 'No'],
@@ -463,9 +463,11 @@ export default function Historial() {
                   {selected.auto.foto_condiciones?.length > 0 && selected.auto.foto_condiciones.map((f, i) => (
                     <img key={i} src={f} alt="" className="h-16 w-16 object-cover rounded-lg border" />
                   ))}
+                  {selected.auto.foto_poliza_seguro && <img src={selected.auto.foto_poliza_seguro} alt="Póliza seguro" className="h-16 w-16 object-cover rounded-lg border" title="Póliza de seguro" />}
                   {selected.auto.foto_licencia && <img src={selected.auto.foto_licencia} alt="Licencia frente" className="h-16 w-16 object-cover rounded-lg border" title="Licencia frente" />}
                   {selected.auto.foto_licencia_reverso && <img src={selected.auto.foto_licencia_reverso} alt="Licencia reverso" className="h-16 w-16 object-cover rounded-lg border" title="Licencia reverso" />}
-                  {selected.auto.foto_tarjeta_circulacion && <img src={selected.auto.foto_tarjeta_circulacion} alt="Tarjeta circ." className="h-16 w-16 object-cover rounded-lg border" />}
+                  {selected.auto.foto_tarjeta_circulacion && <img src={selected.auto.foto_tarjeta_circulacion} alt="Tarjeta circ." className="h-16 w-16 object-cover rounded-lg border" title="Tarjeta de circulación" />}
+                  {selected.auto.foto_llanta_refaccion && <img src={selected.auto.foto_llanta_refaccion} alt="Llanta refacción" className="h-16 w-16 object-cover rounded-lg border" title="Llanta de refacción" />}
                 </div>
                 {(selected.auto.firma_empleado || selected.auto.firma_auditor) && (
                   <div className="flex gap-3 mt-2">
