@@ -87,7 +87,7 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
         tiene_auto: r.tiene_auto ? 'Sí' : 'No',
         tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',
         llanta_refaccion: r.llanta_refaccion == null ? '' : r.llanta_refaccion ? 'Sí' : 'No',
-        fecha_revision: r.fecha_revision ? new Date(r.fecha_revision).toLocaleString('es-MX') : '',
+        fecha_revision: r.fecha_revision ? new Date(r.fecha_revision).toLocaleString('es-MX', { timeZone: 'America/Tijuana' }) : '',
       });
     });
     const buffer = await wb.xlsx.writeBuffer();

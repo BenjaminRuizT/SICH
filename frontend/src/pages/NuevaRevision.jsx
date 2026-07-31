@@ -173,6 +173,8 @@ export default function NuevaRevision() {
   const [manualForm, setManualForm] = useState({ nombre_completo: '', numero_empleado: '', posicion: '', departamento: '', plaza: '' });
   const [manualError, setManualError] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
+  const [showAutoNewSig, setShowAutoNewSig] = useState(false);
+  const [showEquipoNewSig, setShowEquipoNewSig] = useState(false);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -768,15 +770,27 @@ export default function NuevaRevision() {
               onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
             {auditorFirma ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
                   <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
                   <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
                 </div>
-                <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
-                <SignatureCanvas label="" signerName={nombreAuditor}
-                  onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
+                {!showAutoNewSig ? (
+                  <button type="button" onClick={() => setShowAutoNewSig(true)}
+                    className="text-xs text-brand-600 hover:underline">
+                    Usar firma diferente en esta revisión
+                  </button>
+                ) : (
+                  <div className="space-y-1">
+                    <SignatureCanvas label="" signerName={nombreAuditor}
+                      onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
+                    <button type="button" onClick={() => { setShowAutoNewSig(false); setAutoForm(p => ({ ...p, firma_auditor: auditorFirma })); }}
+                      className="text-xs text-gray-500 hover:underline">
+                      Cancelar — usar firma guardada
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}
@@ -847,15 +861,23 @@ export default function NuevaRevision() {
           {/* Damage panel */}
           <div className="card">
             <p className="label mb-3">Panel de daños — Equipo</p>
-            <DamagePanel type="laptop" value={equipoForm.danos} onChange={v => setEquipoForm(p => ({ ...p, danos: v }))} />
+            <DamagePanel type="laptop" value={equipoForm.danos} onChange={v => setEquipoForm(p => ({
+              ...p, danos: v,
+              ...(v.length === 0 ? { foto_equipo: null } : {}),
+            }))} />
           </div>
 
-          <div>
-            <PhotoCapture label="Foto del equipo"
-              onCapture={v => setEquipoForm(p => ({ ...p, foto_equipo: v }))}
-              value={equipoForm.foto_equipo} />
-            <Err field="foto_equipo" />
-          </div>
+          {equipoForm.danos.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-sm text-amber-800">
+                <span className="text-base leading-none mt-0.5">📸</span>
+                <span>Se requiere evidencia fotográfica de los daños registrados</span>
+              </div>
+              <PhotoCapture label="Foto del equipo"
+                onCapture={v => setEquipoForm(p => ({ ...p, foto_equipo: v }))}
+                value={equipoForm.foto_equipo} />
+            </div>
+          )}
 
           <div>
             <label className="label">Comentarios</label>
@@ -870,15 +892,27 @@ export default function NuevaRevision() {
               onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
             <Err field="firma_empleado" />
             {auditorFirma ? (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
                   <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
                   <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
                 </div>
-                <p className="text-xs text-gray-400">Dibuja abajo para reemplazarla en esta revisión.</p>
-                <SignatureCanvas label="" signerName={nombreAuditor}
-                  onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
+                {!showEquipoNewSig ? (
+                  <button type="button" onClick={() => setShowEquipoNewSig(true)}
+                    className="text-xs text-brand-600 hover:underline">
+                    Usar firma diferente en esta revisión
+                  </button>
+                ) : (
+                  <div className="space-y-1">
+                    <SignatureCanvas label="" signerName={nombreAuditor}
+                      onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
+                    <button type="button" onClick={() => { setShowEquipoNewSig(false); setEquipoForm(p => ({ ...p, firma_auditor: auditorFirma })); }}
+                      className="text-xs text-gray-500 hover:underline">
+                      Cancelar — usar firma guardada
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <SignatureCanvas label="Firma del auditor" signerName={nombreAuditor}

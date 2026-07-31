@@ -197,8 +197,9 @@ export default function Historial() {
     } finally { setEditSaving(false); }
   };
 
-  const fmtFecha = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
-  const fmtFechaHora = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const TZ = 'America/Tijuana';
+  const fmtFecha = (d) => new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: TZ });
+  const fmtFechaHora = (d) => new Date(d).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: TZ });
 
   const BadgeAuto = () => <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">🚗 Auto</span>;
   const BadgeEquipo = () => <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">💻 Equipo</span>;
@@ -441,7 +442,7 @@ export default function Historial() {
             </div>
             <div>
               <p className="text-xs text-gray-400 uppercase font-semibold">Revision</p>
-              <p>{new Date(selected.fecha_revision).toLocaleString('es-MX')}</p>
+              <p>{new Date(selected.fecha_revision).toLocaleString('es-MX', { timeZone: TZ })}</p>
               <p className="text-gray-500">Auditor: {selected.auditor_nombre}</p>
             </div>
             {selected.auto && (

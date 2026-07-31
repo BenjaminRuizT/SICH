@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 function fmtFull(date) {
   if (!date) return '—';
-  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Tijuana' });
 }
 
 export default function Verificar() {

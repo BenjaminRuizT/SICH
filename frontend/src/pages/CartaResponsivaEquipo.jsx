@@ -4,13 +4,14 @@ import api from '../context/AuthContext';
 import { generateDocHash, fmtFolio } from '../utils/docSecurity';
 import { fixSignatureBg } from '../utils/signatureUtils';
 
+const TZ = 'America/Tijuana';
 function fmtFull(date) {
   if (!date) return '—';
-  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: TZ });
 }
 function fmtDate(date) {
   if (!date) return '___________________';
-  return new Date(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
 }
 
 export default function CartaResponsivaEquipo() {

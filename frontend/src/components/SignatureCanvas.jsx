@@ -4,6 +4,7 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
   const canvasRef = useRef(null);
   const drawing = useRef(false);
   const autoSaveTimer = useRef(null);
+  const dprRef = useRef(1);
   const [signed, setSigned] = useState(false);
 
   const autoSave = useCallback(() => {
@@ -18,25 +19,32 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
       ctx2.fillStyle = '#ffffff';
       ctx2.fillRect(0, 0, tmp.width, tmp.height);
       ctx2.drawImage(canvas, 0, 0);
-      onSave(tmp.toDataURL('image/jpeg', 0.85));
+      onSave(tmp.toDataURL('image/jpeg', 0.92));
     }, 800);
   }, [onSave]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    dprRef.current = dpr;
+    const cssW = canvas.offsetWidth || 500;
+    const cssH = 160;
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+
     const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
     ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     const getPos = (e) => {
       const rect = canvas.getBoundingClientRect();
       const src = e.touches ? e.touches[0] : e;
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
       return {
-        x: (src.clientX - rect.left) * scaleX,
-        y: (src.clientY - rect.top) * scaleY,
+        x: src.clientX - rect.left,
+        y: src.clientY - rect.top,
       };
     };
 
@@ -73,7 +81,7 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
   const clear = () => {
     clearTimeout(autoSaveTimer.current);
     const canvas = canvasRef.current;
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    canvas.getContext('2d').clearRect(0, 0, canvas.offsetWidth, 160);
     setSigned(false);
     onSave(null);
   };
@@ -83,7 +91,7 @@ export default function SignatureCanvas({ onSave, label = 'Firma', signerName = 
       <label className="label">{label}</label>
       {signerName && <p className="text-xs text-gray-500 -mt-1">{signerName}</p>}
       <div className={`border-2 rounded-xl overflow-hidden bg-gray-50 ${signed ? 'border-brand-400' : 'border-gray-300'}`}>
-        <canvas ref={canvasRef} width={500} height={220} className="w-full touch-none" />
+        <canvas ref={canvasRef} className="w-full touch-none" style={{ height: '160px' }} />
       </div>
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-gray-400">{signed ? '✓ Firma capturada (se guarda automáticamente)' : 'Dibuja la firma arriba'}</p>

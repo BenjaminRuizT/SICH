@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+const TZ = 'America/Tijuana';
 const fmt = (iso) => {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ });
 };
 const fmtDT = (iso) => {
   if (!iso) return '—';
-  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ });
 };
 
 const SECTIONS = [
@@ -84,7 +85,7 @@ const StatCard = ({ label, value, sub }) => (
 export default function Documentacion() {
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ });
 
   useEffect(() => {
     axios.get('/api/admin/sysinfo', { withCredentials: true })

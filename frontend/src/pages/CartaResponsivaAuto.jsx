@@ -4,13 +4,14 @@ import api from '../context/AuthContext';
 import { generateDocHash, fmtFolio } from '../utils/docSecurity';
 import { fixSignatureBg } from '../utils/signatureUtils';
 
+const TZ = 'America/Tijuana';
 function fmt(date) {
   if (!date) return '___________________';
-  return new Date(date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(date).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric', timeZone: TZ });
 }
 function fmtFull(date) {
   if (!date) return '—';
-  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+  return new Date(date).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short', timeZone: TZ });
 }
 function blank(val) { return val || '________________________________'; }
 function yesno(val) { return val === true || val === 'true' || val === 'Sí' ? 'Sí' : val === false || val === 'false' || val === 'No' ? 'No' : '—'; }

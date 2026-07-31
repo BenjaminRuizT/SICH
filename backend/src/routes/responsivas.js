@@ -3,6 +3,7 @@ const router = require('express').Router();
 const PDFDocument = require('pdfkit');
 const puppeteer = require('puppeteer-core');
 const archiver = require('archiver');
+const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const pool = require('../db');
@@ -22,14 +23,16 @@ function requireExportAccess(req, res, next) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+const TZ = 'America/Tijuana';
+
 function fmtDate(d) {
   if (!d) return '___________________';
-  return new Date(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(d).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ });
 }
 
 function fmtFull(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(d).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short', timeZone: TZ });
 }
 
 function boolStr(v) {
@@ -174,6 +177,7 @@ u{text-decoration:underline;padding:0 2px}
 .sig-label{font-size:10px;color:#555;margin-top:2px}
 .footer{margin-top:20px;padding-top:10px;border-top:1px solid #d1d5db;font-size:8px;color:#6b7280}
 .btn{position:fixed;top:10px;right:10px;background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;z-index:999}
+@page{margin-top:12mm}
 @media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:12mm 14mm}.page-break{page-break-after:always}.btn{display:none}}
 </style>
 </head>
@@ -292,16 +296,17 @@ function buildEquipoHTML(rev, rawEquipo, ciudad) {
 body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#000;background:#f3f4f6}
 .page{width:210mm;max-width:100%;margin:10mm auto;padding:22mm 22mm;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 u{text-decoration:underline;padding:0 4px;display:inline-block;min-width:120px}
-.sigs{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:32px;text-align:center}
-.sig-img{height:80px;max-width:100%;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
-.sig-line{height:80px;border-bottom:2px solid #111}
-.sig-title{font-weight:bold;margin-bottom:32px}
-.testigo{text-align:center;margin-top:28px}
-.testigo-img{height:64px;max-width:200px;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
-.testigo-line{height:64px;border-bottom:2px solid #111;max-width:200px;margin:0 auto}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px;text-align:center}
+.sig-img{height:70px;max-width:100%;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
+.sig-line{height:70px;border-bottom:2px solid #111}
+.sig-title{font-weight:bold;margin-bottom:20px}
+.testigo{text-align:center;margin-top:16px}
+.testigo-img{height:56px;max-width:200px;border-bottom:2px solid #111;display:block;margin:0 auto;object-fit:contain}
+.testigo-line{height:56px;border-bottom:2px solid #111;max-width:200px;margin:0 auto}
 .footer{margin-top:24px;padding-top:12px;border-top:1px solid #d1d5db;font-size:8px;color:#6b7280}
 .btn{position:fixed;top:10px;right:10px;background:#1e3a8a;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;z-index:999}
-@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:15mm 18mm}.btn{display:none}}
+@page{margin-top:12mm}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;padding:14mm 18mm}.btn{display:none}}
 </style>
 </head>
 <body>
@@ -309,23 +314,23 @@ u{text-decoration:underline;padding:0 4px;display:inline-block;min-width:120px}
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},600);});</script>
 
 <div class="page">
-  <div style="display:flex;align-items:center;margin-bottom:40px">
+  <div style="display:flex;align-items:center;margin-bottom:20px">
     ${logoTag}
     <p style="flex:1;text-align:center;font-size:18px;font-weight:900;letter-spacing:.05em">
       PLAZA <u style="min-width:120px">${plaza || '_______________'}</u>
     </p>
   </div>
 
-  <p style="text-align:right;font-size:13px;margin-bottom:40px">
+  <p style="text-align:right;font-size:13px;margin-bottom:20px">
     ${ciudadStr}, a <u style="min-width:140px">${fecha}</u>
   </p>
 
-  <p style="font-size:13px;line-height:1.7;margin-bottom:40px">
+  <p style="font-size:13px;line-height:1.7;margin-bottom:20px">
     Hago entrega para uso laboral <strong>de Laptop <u>${descripcion || '___________________________'}</u></strong>,
     para el buen uso y al servicio de la Compañía <strong>CADENA COMERCIAL OXXO, S.A. DE C. V.</strong>
   </p>
 
-  <div style="text-align:center;margin-bottom:40px">
+  <div style="text-align:center;margin-bottom:16px">
     <p style="margin-bottom:12px"><strong>NUMERO DE ACTIVO:</strong> <u style="min-width:180px">${codigoBarras}</u></p>
     <p><strong>NÚMERO DE SERIE:</strong> <u style="min-width:180px">${serie}</u></p>
   </div>
@@ -383,7 +388,7 @@ async function cartaToPDF(browser, path, authToken) {
     await page.emulateMediaType('print');
     await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle2', timeout: 30000 });
     // puppeteer-core 22+ returns Uint8Array; convert to Buffer for archiver compatibility
-    return Buffer.from(await page.pdf({ format: 'Letter', printBackground: true }));
+    return Buffer.from(await page.pdf({ format: 'A4', printBackground: true }));
   } finally {
     await page.close();
   }
@@ -539,6 +544,77 @@ function buildResumenPDF(rev, rawAuto, rawEquipo) {
   });
 }
 
+async function buildExcelBuffer(revs, autoByRevId, equipoByRevId) {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Revisiones');
+  ws.columns = [
+    { header: 'Folio',          key: 'folio',        width: 14 },
+    { header: 'Fecha',          key: 'fecha',        width: 22 },
+    { header: 'Auditor',        key: 'auditor',      width: 20 },
+    { header: 'No. Empleado',   key: 'num_emp',      width: 14 },
+    { header: 'Nombre',         key: 'nombre',       width: 30 },
+    { header: 'Posición',       key: 'posicion',     width: 25 },
+    { header: 'Departamento',   key: 'depto',        width: 25 },
+    { header: 'Plaza',          key: 'plaza',        width: 15 },
+    { header: 'Auto',           key: 'tiene_auto',   width: 8  },
+    { header: 'Placas',         key: 'placas',       width: 12 },
+    { header: 'No. Serie Auto', key: 'no_serie',     width: 20 },
+    { header: 'Kilometraje',    key: 'km',           width: 12 },
+    { header: 'Póliza Seguro',  key: 'poliza',       width: 14 },
+    { header: 'Licencia',       key: 'licencia',     width: 12 },
+    { header: 'Llanta Ref.',    key: 'llanta',       width: 12 },
+    { header: 'Gato/Cruceta',   key: 'gato',         width: 13 },
+    { header: 'Tarjeta Circ.',  key: 'tarjeta',      width: 13 },
+    { header: 'Daños Auto',     key: 'danos_auto',   width: 12 },
+    { header: 'Equipo',         key: 'tiene_equipo', width: 8  },
+    { header: 'CB Equipo',      key: 'cb_equipo',    width: 15 },
+    { header: 'Marca',          key: 'marca',        width: 15 },
+    { header: 'Modelo',         key: 'modelo',       width: 15 },
+    { header: 'Serie Equipo',   key: 'serie_equipo', width: 20 },
+    { header: 'Daños Equipo',   key: 'danos_equipo', width: 13 },
+  ];
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF134e4a' } };
+
+  const safe = (v) => typeof v === 'string' && /^[=+\-@|%]/.test(v) ? `'${v}` : (v || '');
+  const yn = (v) => (v == null || v === '') ? '' : (v === true || v === 'true' || v === 1) ? 'Sí' : 'No';
+
+  for (const r of revs) {
+    const emp = (r.empleado_snapshot && typeof r.empleado_snapshot === 'object') ? r.empleado_snapshot : {};
+    const ra = autoByRevId[r.id];
+    const re = equipoByRevId[r.id];
+    const autoDanos = ra && Array.isArray(ra.danos) ? ra.danos.length : 0;
+    const equipoDanos = re && Array.isArray(re.danos) ? re.danos.length : 0;
+    ws.addRow({
+      folio:        folio(r.id),
+      fecha:        r.fecha_revision ? new Date(r.fecha_revision).toLocaleString('es-MX', { timeZone: TZ }) : '',
+      auditor:      safe(r.auditor_nombre),
+      num_emp:      safe(emp.numero_empleado),
+      nombre:       safe(emp.nombre_completo),
+      posicion:     safe(emp.posicion),
+      depto:        safe(emp.departamento),
+      plaza:        safe(emp.plaza),
+      tiene_auto:   r.tiene_auto  ? 'Sí' : 'No',
+      placas:       ra ? safe(ra.placas)          : '',
+      no_serie:     ra ? safe(ra.no_serie)         : '',
+      km:           ra ? (ra.kilometraje || '')    : '',
+      poliza:       ra ? yn(ra.poliza_seguro)      : '',
+      licencia:     ra ? yn(ra.licencia_numero)    : '',
+      llanta:       ra ? yn(ra.llanta_refaccion)   : '',
+      gato:         ra ? yn(ra.gato_cruceta)       : '',
+      tarjeta:      ra ? yn(ra.tarjeta_circulacion): '',
+      danos_auto:   autoDanos > 0 ? `${autoDanos} daño(s)` : '',
+      tiene_equipo: r.tiene_equipo ? 'Sí' : 'No',
+      cb_equipo:    re ? safe(re.codigo_barras) : '',
+      marca:        re ? safe(re.marca)         : '',
+      modelo:       re ? safe(re.modelo)        : '',
+      serie_equipo: re ? safe(re.serie)         : '',
+      danos_equipo: equipoDanos > 0 ? `${equipoDanos} daño(s)` : '',
+    });
+  }
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
 // ── Background job store ──────────────────────────────────────────────────────
 
 const jobs = new Map();
@@ -660,6 +736,15 @@ async function runGenerarZip(jobId, params, authToken) {
       }
     } finally {
       await browser.close();
+    }
+
+    // Excel resumen al inicio del ZIP
+    try {
+      const excelBuf = await buildExcelBuffer(revs, autoByRevId, equipoByRevId);
+      const fechaStr = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: TZ }).replace(/\//g, '-');
+      entries.unshift({ p: `SICHE_Revisiones_${fechaStr}.xlsx`, buf: excelBuf });
+    } catch (excelErr) {
+      console.error('ZIP: Error generando Excel:', excelErr.message);
     }
 
     // Ensamblar ZIP en memoria

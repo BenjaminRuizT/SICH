@@ -4,7 +4,7 @@ import api from '../../context/AuthContext';
 import SignatureCanvas from '../../components/SignatureCanvas';
 import { fixSignatureBg } from '../../utils/signatureUtils';
 
-const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('es-MX', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'America/Tijuana' }) : '—';
 
 export default function Configuracion() {
   const [minutes, setMinutes] = useState('');

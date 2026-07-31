@@ -151,7 +151,7 @@ export default function Herramientas() {
                     {detail.revisiones.map(r => (
                       <div key={r.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
                         <div>
-                          <p className="text-xs font-semibold">{new Date(r.fecha_revision).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                          <p className="text-xs font-semibold">{new Date(r.fecha_revision).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Tijuana' })}</p>
                           <p className="text-xs text-gray-500">Auditor: {r.auditor_nombre}</p>
                         </div>
                         <div className="flex items-center gap-2">
