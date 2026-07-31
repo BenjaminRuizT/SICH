@@ -188,4 +188,13 @@ router.patch('/:id', requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
 });
 
+// Eliminar revisión — solo admin (cascade borra revision_auto y revision_equipo)
+router.delete('/:id', requireAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query('DELETE FROM revisiones WHERE id=$1 RETURNING id', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrada' });
+    res.json({ ok: true });
+  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+});
+
 module.exports = router;

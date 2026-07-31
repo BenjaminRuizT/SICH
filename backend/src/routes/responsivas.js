@@ -382,7 +382,8 @@ async function cartaToPDF(browser, path, authToken) {
     await page.setCookie({ name: 'siche_token', value: authToken, domain: 'localhost', path: '/' });
     await page.emulateMediaType('print');
     await page.goto(`http://localhost:${port}${path}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    return await page.pdf({ format: 'Letter', printBackground: true });
+    // puppeteer-core 22+ returns Uint8Array; convert to Buffer for archiver compatibility
+    return Buffer.from(await page.pdf({ format: 'Letter', printBackground: true }));
   } finally {
     await page.close();
   }
@@ -671,9 +672,19 @@ async function runGenerarZip(jobId, params, authToken) {
     await new Promise((resolve, reject) => {
       pass.on('end', resolve);
       archive.on('error', reject);
-      for (const { p, buf } of entries) archive.append(buf, { name: p });
+      for (const { p, buf } of entries) {
+        if (buf && Buffer.isBuffer(buf) && buf.length > 0) {
+          archive.append(buf, { name: p });
+        }
+      }
       archive.finalize();
     });
+
+    if (entries.length === 0) {
+      job.status = 'error';
+      job.error = 'No se generó ningún archivo. Revisa que las revisiones tengan datos.';
+      return;
+    }
 
     job.buf = Buffer.concat(zipChunks);
     job.status = 'ready';

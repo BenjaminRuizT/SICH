@@ -31,7 +31,11 @@ export default function Historial() {
   const [editForm, setEditForm] = useState({ observaciones: '', auto: null, equipo: null });
   const [editSaving, setEditSaving] = useState(false);
   const [zipJob, setZipJob] = useState(null); // { jobId, status, current, total }
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const pollRef = useRef(null);
+
+  const ZIP_SESSION_KEY = 'sich_zip_jobid';
 
   useEffect(() => {
     api.get('/admin/exportar-responsivas-roles')
@@ -78,27 +82,47 @@ export default function Historial() {
     } catch { alert('Error al exportar Excel. Intenta de nuevo.'); }
   };
 
+  const startPolling = useCallback((jobId) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const estado = await api.get(`/responsivas/estado/${jobId}`);
+        setZipJob(prev => prev ? { ...prev, ...estado.data } : { jobId, ...estado.data });
+        if (estado.data.status === 'ready' || estado.data.status === 'error') {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          if (estado.data.status === 'error') sessionStorage.removeItem(ZIP_SESSION_KEY);
+        }
+      } catch (e) {
+        if (e.response?.status === 404) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          sessionStorage.removeItem(ZIP_SESSION_KEY);
+          setZipJob(null);
+        }
+      }
+    }, 2000);
+  }, [ZIP_SESSION_KEY]);
+
+  // Restore ZIP job persisted across navigation / page refresh
+  useEffect(() => {
+    const savedJobId = sessionStorage.getItem(ZIP_SESSION_KEY);
+    if (!savedJobId) return;
+    setZipJob({ jobId: savedJobId, status: 'pending', current: 0, total: 0 });
+    startPolling(savedJobId);
+  }, [ZIP_SESSION_KEY, startPolling]);
+
   const solicitarZip = async () => {
     setExportMsg(null);
-    if (pollRef.current) clearInterval(pollRef.current);
     try {
       const body = {};
       if (desde) body.desde = desde;
       if (hasta) body.hasta = hasta;
       const r = await api.post('/responsivas/generar', body);
       const jobId = r.data.jobId;
+      sessionStorage.setItem(ZIP_SESSION_KEY, jobId);
       setZipJob({ jobId, status: 'pending', current: 0, total: 0 });
-
-      pollRef.current = setInterval(async () => {
-        try {
-          const estado = await api.get(`/responsivas/estado/${jobId}`);
-          setZipJob(prev => ({ ...prev, ...estado.data }));
-          if (estado.data.status === 'ready' || estado.data.status === 'error') {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-        } catch {}
-      }, 2000);
+      startPolling(jobId);
     } catch (e) {
       const msg = e.response?.status === 404
         ? 'Sin revisiones en el rango indicado.'
@@ -117,12 +141,14 @@ export default function Historial() {
       a.download = `SICHE_Revisiones_${new Date().toISOString().slice(0, 10)}.zip`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      sessionStorage.removeItem(ZIP_SESSION_KEY);
       setZipJob(null);
     } catch { setExportMsg('Error al descargar. Intenta de nuevo.'); }
   };
 
   const cancelarZip = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    sessionStorage.removeItem(ZIP_SESSION_KEY);
     setZipJob(null);
   };
 
@@ -404,7 +430,7 @@ export default function Historial() {
       )}
 
       {/* Modal detalle */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title="Detalle de revision" maxWidth="max-w-2xl">
+      <Modal open={!!selected} onClose={() => { setSelected(null); setDeleteConfirm(false); }} title="Detalle de revision" maxWidth="max-w-2xl">
         {selected && (
           <div className="space-y-4 text-sm">
             <div>
@@ -499,12 +525,42 @@ export default function Historial() {
             )}
           </div>
         )}
-        {selected && canEditRevision && !editMode && (
-          <div className="pt-3 border-t border-gray-100">
-            <button onClick={() => openEdit(selected)}
-              className="text-xs bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
-              ✏️ Corregir datos de este registro
-            </button>
+        {selected && (canEditRevision || isAdmin) && !editMode && (
+          <div className="pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+            {canEditRevision && (
+              <button onClick={() => openEdit(selected)}
+                className="text-xs bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                ✏️ Corregir datos de este registro
+              </button>
+            )}
+            {isAdmin && !deleteConfirm && (
+              <button onClick={() => setDeleteConfirm(true)}
+                className="text-xs bg-red-50 border border-red-300 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                🗑 Eliminar registro
+              </button>
+            )}
+            {isAdmin && deleteConfirm && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-red-700 font-semibold">¿Eliminar permanentemente?</span>
+                <button onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    await api.delete(`/revisiones/${selected.id}`);
+                    setSelected(null);
+                    setDeleteConfirm(false);
+                    cargar();
+                  } catch { alert('Error al eliminar. Intenta de nuevo.'); }
+                  finally { setDeleting(false); }}
+                } disabled={deleting}
+                  className="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-60">
+                  {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                </button>
+                <button onClick={() => setDeleteConfirm(false)}
+                  className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-gray-200">
+                  Cancelar
+                </button>
+              </div>
+            )}
           </div>
         )}
         {selected && editMode && (
