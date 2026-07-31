@@ -450,7 +450,8 @@ export default function Historial() {
                     ['Modelo', selected.auto.no_modelo],
                     ['Kilometraje', selected.auto.kilometraje],
                     ['Poliza', selected.auto.poliza_seguro === true || selected.auto.poliza_seguro === 'true' ? 'Si' : selected.auto.poliza_seguro === false || selected.auto.poliza_seguro === 'false' ? 'No' : selected.auto.poliza_seguro || '—'],
-                    ['Licencia', selected.auto.licencia === true || selected.auto.licencia === 'true' ? 'Si' : selected.auto.licencia === false || selected.auto.licencia === 'false' ? 'No' : selected.auto.licencia || '—'],
+                    ['Licencia', selected.auto.licencia_numero == null ? '—' : selected.auto.licencia_numero ? 'Si' : 'No'],
+                    ['Tarjeta circ.', selected.auto.tarjeta_circulacion == null ? '—' : selected.auto.tarjeta_circulacion ? 'Si' : 'No'],
                     ['Llanta ref.', selected.auto.llanta_refaccion == null ? '—' : selected.auto.llanta_refaccion ? 'Si' : 'No'],
                     ['Gato/Cruceta', selected.auto.gato_cruceta == null ? '—' : selected.auto.gato_cruceta ? 'Si' : 'No'],
                   ].map(([l,v]) => (
