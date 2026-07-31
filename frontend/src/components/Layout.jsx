@@ -225,8 +225,8 @@ export default function Layout({ children }) {
         <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src="/logo.png" alt="SCH" className="h-9 w-9 rounded-full object-cover ring-2 ring-white/20" />
-            <div className="hidden sm:flex flex-col leading-none">
-              <span className="font-bold text-sm tracking-tight leading-tight">Sistema de Control<br/>de Herramienta</span>
+            <div className="flex flex-col leading-none">
+              <span className="hidden sm:inline font-bold text-sm tracking-tight leading-tight">Sistema de Control<br/>de Herramienta</span>
               <span className="text-brand-300 text-[10px]">v{APP_VERSION}</span>
             </div>
           </div>
