@@ -175,6 +175,10 @@ export default function NuevaRevision() {
   const [manualLoading, setManualLoading] = useState(false);
   const [showAutoNewSig, setShowAutoNewSig] = useState(false);
   const [showEquipoNewSig, setShowEquipoNewSig] = useState(false);
+  const [completarMode, setCompletarMode] = useState(false);
+  const [completarRevisionId, setCompletarRevisionId] = useState(null);
+  const [showAutoEmpNewSig, setShowAutoEmpNewSig] = useState(false);
+  const [showEquipoEmpNewSig, setShowEquipoEmpNewSig] = useState(false);
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -208,6 +212,73 @@ export default function NuevaRevision() {
       setConfirmReset(true);
     }
   }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Inicializa el modo completar desde el estado de navegación (Historial → NuevaRevision)
+  useEffect(() => {
+    const rev = location.state?.completarRevision;
+    if (!rev) return;
+    setCompletarMode(true);
+    setCompletarRevisionId(rev.id);
+    const snap = rev.empleado_snapshot || {};
+    const empData = {
+      id: rev.empleado_id,
+      nombre_completo: rev.nombre_completo || snap.nombre_completo || '',
+      numero_empleado: rev.numero_empleado || snap.numero_empleado || '',
+      posicion: snap.posicion || '',
+      departamento: snap.departamento || '',
+      plaza: snap.plaza || '',
+    };
+    setEmpleado(empData);
+    setEditEmpleado(empData);
+    setRevisarAuto(!!rev.auto);
+    setRevisarEquipo(!!rev.equipo);
+    if (rev.auto) {
+      const a = rev.auto;
+      setAutoSelec(a.herramienta_id ? { ...a.herramienta_snapshot, id: a.herramienta_id } : null);
+      setAutoForm(f => ({
+        ...f,
+        codigo_barras: a.codigo_barras || '',
+        no_modelo: a.no_modelo || '',
+        no_serie: a.no_serie || '',
+        placas: a.placas || '',
+        kilometraje: a.kilometraje || '',
+        domicilio: a.domicilio || '',
+        codigo_postal: a.codigo_postal || '',
+        poliza_seguro: a.poliza_seguro === 'true' ? true : a.poliza_seguro === 'false' ? false : null,
+        licencia: a.licencia_numero === 'true' ? true : a.licencia_numero === 'false' ? false : null,
+        llanta_refaccion: a.llanta_refaccion,
+        gato_cruceta: a.gato_cruceta,
+        tarjeta_circulacion: a.tarjeta_circulacion,
+        comentarios: a.comentarios || '',
+        foto_condiciones: a.foto_condiciones || [],
+        foto_licencia: a.foto_licencia || null,
+        foto_licencia_reverso: a.foto_licencia_reverso || null,
+        foto_tarjeta_circulacion: a.foto_tarjeta_circulacion || null,
+        foto_poliza_seguro: a.foto_poliza_seguro || null,
+        foto_llanta_refaccion: a.foto_llanta_refaccion || null,
+        danos: a.danos || [],
+        firma_empleado: a.firma_empleado || null,
+        firma_auditor: a.firma_auditor || null,
+      }));
+    }
+    if (rev.equipo) {
+      const e = rev.equipo;
+      setEquipoSelec(e.herramienta_id ? { ...e.herramienta_snapshot, id: e.herramienta_id } : null);
+      setEquipoForm(f => ({
+        ...f,
+        codigo_barras: e.codigo_barras || '',
+        marca: e.marca || '',
+        modelo: e.modelo || '',
+        serie: e.serie || '',
+        foto_equipo: e.foto_equipo || null,
+        comentarios: e.comentarios || '',
+        danos: e.danos || [],
+        firma_empleado: e.firma_empleado || null,
+        firma_auditor: e.firma_auditor || null,
+      }));
+    }
+    setPaso(rev.auto ? 3 : 4);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buscar = useCallback(async (q) => {
     setQuery(q);
@@ -313,14 +384,24 @@ export default function NuevaRevision() {
   const enviar = async () => {
     setSending(true);
     try {
-      const res = await api.post('/revisiones', {
-        empleado_id: empleado.id,
-        empleado_snapshot: editEmpleado,
-        observaciones: '',
-        auto: revisarAuto ? { ...autoForm, herramienta_id: autoSelec?.id, herramienta_snapshot: autoSelec } : null,
-        equipo: revisarEquipo ? { ...equipoForm, herramienta_id: equipoSelec?.id, herramienta_snapshot: equipoSelec } : null,
-      });
-      setSavedId(res.data.id);
+      if (completarMode) {
+        await api.patch(`/revisiones/${completarRevisionId}`, {
+          completar: true,
+          observaciones: '',
+          auto: revisarAuto ? { ...autoForm, herramienta_id: autoSelec?.id, herramienta_snapshot: autoSelec } : undefined,
+          equipo: revisarEquipo ? { ...equipoForm, herramienta_id: equipoSelec?.id, herramienta_snapshot: equipoSelec } : undefined,
+        });
+        setSavedId(completarRevisionId);
+      } else {
+        const res = await api.post('/revisiones', {
+          empleado_id: empleado.id,
+          empleado_snapshot: editEmpleado,
+          observaciones: '',
+          auto: revisarAuto ? { ...autoForm, herramienta_id: autoSelec?.id, herramienta_snapshot: autoSelec } : null,
+          equipo: revisarEquipo ? { ...equipoForm, herramienta_id: equipoSelec?.id, herramienta_snapshot: equipoSelec } : null,
+        });
+        setSavedId(res.data.id);
+      }
     } catch (e) {
       alert('Error al guardar: ' + (e.response?.data?.error || e.message));
     } finally { setSending(false); }
@@ -348,15 +429,23 @@ export default function NuevaRevision() {
     setAutoForm({ ...emptyAuto, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma, firma_auditor: auditorFirma });
     setEquipoForm({ ...emptyEquipo, nombre_responsable_rh: rhConfig.nombre, firma_responsable_rh: rhConfig.firma, firma_auditor: auditorFirma });
     setErrors({});
+    setCompletarMode(false);
+    setCompletarRevisionId(null);
+    setShowAutoEmpNewSig(false);
+    setShowEquipoEmpNewSig(false);
   };
 
   if (savedId) {
     return (
       <div className="md:ml-56 max-w-2xl">
         <div className="card text-center space-y-4">
-          <div className="text-5xl">✅</div>
-          <h2 className="text-xl font-bold text-gray-900">Revisión guardada</h2>
-          <p className="text-gray-500 text-sm">ID de revisión: <strong>#{savedId}</strong></p>
+          <div className="text-5xl">{completarMode ? '📷' : '✅'}</div>
+          <h2 className="text-xl font-bold text-gray-900">
+            {completarMode ? 'Expediente completado' : 'Revisión guardada'}
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Folio: <strong>SICH-{String(savedId).padStart(6, '0')}</strong>
+          </p>
           <div className="flex flex-col gap-2">
             {revisarAuto && (
               <a href={`/carta/auto/${savedId}`} target="_blank" rel="noreferrer" className="btn-primary">
@@ -379,8 +468,8 @@ export default function NuevaRevision() {
   const Err = ({ field }) => errors[field] ? <p className="text-red-500 text-xs mt-1">{errors[field]}</p> : null;
 
   const firmaRhFaltante = !rhConfig.nombre || !rhConfig.firma;
-  // Bloquear si falta ciudad, o si falta firma RH y no está en modo opcional
-  if (!rhConfig.ciudad || (!rhConfig.firmaOpcional && firmaRhFaltante)) {
+  // Bloquear si falta ciudad, o si falta firma RH y no está en modo opcional (no aplica en modo completar)
+  if (!completarMode && (!rhConfig.ciudad || (!rhConfig.firmaOpcional && firmaRhFaltante))) {
     const faltantes = [
       !rhConfig.nombre && 'nombre del Responsable de RH',
       !rhConfig.firma  && 'firma del Responsable de RH',
@@ -427,6 +516,13 @@ export default function NuevaRevision() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Banner modo completar */}
+      {completarMode && (
+        <div className="mb-4 flex items-center gap-2 bg-teal-50 border border-teal-200 text-teal-800 text-sm px-4 py-3 rounded-xl font-medium">
+          📷 Completando expediente SICH-{String(completarRevisionId).padStart(6, '0')} — {empleado?.nombre_completo}
         </div>
       )}
 
@@ -766,14 +862,36 @@ export default function NuevaRevision() {
           {/* Firmas para carta compromiso */}
           <div className="card space-y-4">
             <p className="font-semibold text-sm text-gray-700">Firmas para carta compromiso</p>
-            <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
-              onSave={v => setAutoForm(p => ({ ...p, firma_empleado: v }))} />
+            {(completarMode && autoForm.firma_empleado && !showAutoEmpNewSig) ? (
+              <div className="space-y-2">
+                <p className="label">Firma del empleado</p>
+                <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <img src={autoForm.firma_empleado} alt="Firma empleado" className="h-14 object-contain flex-1" />
+                  <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma registrada</span>
+                </div>
+                <button type="button" onClick={() => setShowAutoEmpNewSig(true)}
+                  className="text-xs text-brand-600 hover:underline">
+                  Capturar nueva firma
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <SignatureCanvas label="Firma del empleado" signerName={nombreEmp}
+                  onSave={v => { if (v) setAutoForm(p => ({ ...p, firma_empleado: v })); }} />
+                {completarMode && showAutoEmpNewSig && (
+                  <button type="button" onClick={() => setShowAutoEmpNewSig(false)}
+                    className="text-xs text-gray-500 hover:underline">
+                    Cancelar — usar firma existente
+                  </button>
+                )}
+              </div>
+            )}
             <Err field="firma_empleado" />
-            {auditorFirma ? (
+            {(auditorFirma || (completarMode && autoForm.firma_auditor)) ? (
               <div className="space-y-2">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
-                  <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
+                  <img src={auditorFirma || autoForm.firma_auditor} alt="Firma guardada" className="h-14 object-contain flex-1" />
                   <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
                 </div>
                 {!showAutoNewSig ? (
@@ -784,8 +902,8 @@ export default function NuevaRevision() {
                 ) : (
                   <div className="space-y-1">
                     <SignatureCanvas label="" signerName={nombreAuditor}
-                      onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
-                    <button type="button" onClick={() => { setShowAutoNewSig(false); setAutoForm(p => ({ ...p, firma_auditor: auditorFirma })); }}
+                      onSave={v => setAutoForm(p => ({ ...p, firma_auditor: v !== null ? v : (auditorFirma || p.firma_auditor) }))} />
+                    <button type="button" onClick={() => { setShowAutoNewSig(false); setAutoForm(p => ({ ...p, firma_auditor: auditorFirma || p.firma_auditor })); }}
                       className="text-xs text-gray-500 hover:underline">
                       Cancelar — usar firma guardada
                     </button>
@@ -815,7 +933,9 @@ export default function NuevaRevision() {
           )}
 
           <div className="flex gap-3">
-            <button onClick={() => setPaso(2)} className="btn-secondary flex-1">Atrás</button>
+            <button onClick={() => completarMode ? navigate('/historial') : setPaso(2)} className="btn-secondary flex-1">
+              {completarMode ? 'Cancelar' : 'Atrás'}
+            </button>
             <button onClick={finalizarPasos} className="btn-primary flex-1">Continuar</button>
           </div>
         </div>
@@ -888,14 +1008,36 @@ export default function NuevaRevision() {
           {/* Firmas */}
           <div className="card space-y-4">
             <p className="font-semibold text-sm text-gray-700">Firmas para carta responsiva</p>
-            <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
-              onSave={v => setEquipoForm(p => ({ ...p, firma_empleado: v }))} />
+            {(completarMode && equipoForm.firma_empleado && !showEquipoEmpNewSig) ? (
+              <div className="space-y-2">
+                <p className="label">Firma del empleado (Recibe)</p>
+                <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <img src={equipoForm.firma_empleado} alt="Firma empleado" className="h-14 object-contain flex-1" />
+                  <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma registrada</span>
+                </div>
+                <button type="button" onClick={() => setShowEquipoEmpNewSig(true)}
+                  className="text-xs text-brand-600 hover:underline">
+                  Capturar nueva firma
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <SignatureCanvas label="Firma del empleado (Recibe)" signerName={nombreEmp}
+                  onSave={v => { if (v) setEquipoForm(p => ({ ...p, firma_empleado: v })); }} />
+                {completarMode && showEquipoEmpNewSig && (
+                  <button type="button" onClick={() => setShowEquipoEmpNewSig(false)}
+                    className="text-xs text-gray-500 hover:underline">
+                    Cancelar — usar firma existente
+                  </button>
+                )}
+              </div>
+            )}
             <Err field="firma_empleado" />
-            {auditorFirma ? (
+            {(auditorFirma || (completarMode && equipoForm.firma_auditor)) ? (
               <div className="space-y-2">
                 <p className="label">Firma del auditor</p>
                 <div className="border border-green-200 bg-green-50 rounded-xl p-3 flex items-center justify-between gap-3">
-                  <img src={auditorFirma} alt="Firma guardada" className="h-14 object-contain flex-1" />
+                  <img src={auditorFirma || equipoForm.firma_auditor} alt="Firma guardada" className="h-14 object-contain flex-1" />
                   <span className="text-xs text-green-700 font-semibold shrink-0">✓ Firma guardada</span>
                 </div>
                 {!showEquipoNewSig ? (
@@ -906,8 +1048,8 @@ export default function NuevaRevision() {
                 ) : (
                   <div className="space-y-1">
                     <SignatureCanvas label="" signerName={nombreAuditor}
-                      onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v !== null ? v : auditorFirma }))} />
-                    <button type="button" onClick={() => { setShowEquipoNewSig(false); setEquipoForm(p => ({ ...p, firma_auditor: auditorFirma })); }}
+                      onSave={v => setEquipoForm(p => ({ ...p, firma_auditor: v !== null ? v : (auditorFirma || p.firma_auditor) }))} />
+                    <button type="button" onClick={() => { setShowEquipoNewSig(false); setEquipoForm(p => ({ ...p, firma_auditor: auditorFirma || p.firma_auditor })); }}
                       className="text-xs text-gray-500 hover:underline">
                       Cancelar — usar firma guardada
                     </button>
@@ -937,7 +1079,13 @@ export default function NuevaRevision() {
           )}
 
           <div className="flex gap-3">
-            <button onClick={() => { setErrors({}); setPaso(revisarAuto ? 3 : 2); }} className="btn-secondary flex-1">Atrás</button>
+            <button onClick={() => {
+              setErrors({});
+              if (completarMode) { revisarAuto ? setPaso(3) : navigate('/historial'); }
+              else { setPaso(revisarAuto ? 3 : 2); }
+            }} className="btn-secondary flex-1">
+              {completarMode && !revisarAuto ? 'Cancelar' : 'Atrás'}
+            </button>
             <button onClick={finalizarPasos} className="btn-primary flex-1">Continuar</button>
           </div>
         </div>

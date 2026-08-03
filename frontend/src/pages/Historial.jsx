@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../context/AuthContext';
 import Modal from '../components/Modal';
@@ -13,6 +13,7 @@ const VIEW_MODES = [
 export default function Historial() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = user?.rol === 'admin';
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -526,6 +527,16 @@ export default function Historial() {
         )}
         {selected && (canEditRevision || isAdmin) && !editMode && (
           <div className="pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+            {(canEditRevision || isAdmin) && (
+              <button onClick={() => {
+                const rev = selected;
+                setSelected(null);
+                navigate('/nueva', { state: { completarRevision: rev } });
+              }}
+                className="text-xs bg-teal-50 border border-teal-300 text-teal-800 hover:bg-teal-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">
+                📷 Completar expediente
+              </button>
+            )}
             {canEditRevision && (
               <button onClick={() => openEdit(selected)}
                 className="text-xs bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-semibold transition-colors">

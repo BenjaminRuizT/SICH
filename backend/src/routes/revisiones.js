@@ -153,39 +153,106 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // Editar campos de una revisión — solo admin o usuarios con can_reabrir_revision
+// completar:true → actualiza también fotos, firmas y daños (para completar expedientes sin fotos)
 router.patch('/:id', requireAuth, async (req, res) => {
+  const client = await pool.connect();
   try {
     const isAdmin = req.user.rol === 'admin';
     if (!isAdmin) {
-      const { rows: [u] } = await pool.query('SELECT can_reabrir_revision FROM app_users WHERE id=$1', [req.user.id]);
+      const { rows: [u] } = await client.query('SELECT can_reabrir_revision FROM app_users WHERE id=$1', [req.user.id]);
       if (!u?.can_reabrir_revision) return res.status(403).json({ error: 'Sin permiso para editar revisiones' });
     }
-    const { observaciones, auto, equipo } = req.body;
+    const { observaciones, auto, equipo, completar } = req.body;
+    await client.query('BEGIN');
+
     if (observaciones !== undefined) {
-      await pool.query('UPDATE revisiones SET observaciones=$1 WHERE id=$2', [observaciones || null, req.params.id]);
+      await client.query('UPDATE revisiones SET observaciones=$1 WHERE id=$2', [observaciones || null, req.params.id]);
     }
+
     if (auto) {
-      await pool.query(
-        `UPDATE revision_auto SET
-           placas=COALESCE($1,placas), no_serie=COALESCE($2,no_serie), no_modelo=COALESCE($3,no_modelo),
-           kilometraje=COALESCE($4,kilometraje), comentarios=$5
-         WHERE revision_id=$6`,
-        [auto.placas || null, auto.no_serie || null, auto.no_modelo || null,
-         auto.kilometraje || null, auto.comentarios || null, req.params.id]
-      );
+      if (completar) {
+        await client.query(
+          `UPDATE revision_auto SET
+             placas=COALESCE($1,placas), no_serie=COALESCE($2,no_serie), no_modelo=COALESCE($3,no_modelo),
+             kilometraje=COALESCE($4,kilometraje), comentarios=$5,
+             poliza_seguro=COALESCE($6,poliza_seguro), licencia_numero=COALESCE($7,licencia_numero),
+             llanta_refaccion=COALESCE($8,llanta_refaccion), gato_cruceta=COALESCE($9,gato_cruceta),
+             tarjeta_circulacion=COALESCE($10,tarjeta_circulacion),
+             domicilio=COALESCE($11,domicilio), codigo_postal=$12,
+             foto_condiciones=$13, foto_licencia=$14, foto_licencia_reverso=$15,
+             foto_tarjeta_circulacion=$16, foto_poliza_seguro=$17, foto_llanta_refaccion=$18,
+             danos=$19, firma_empleado=$20, firma_auditor=$21
+           WHERE revision_id=$22`,
+          [
+            auto.placas || null, auto.no_serie || null, auto.no_modelo || null,
+            auto.kilometraje || null, auto.comentarios || null,
+            auto.poliza_seguro != null ? String(auto.poliza_seguro) : null,
+            auto.licencia != null ? String(auto.licencia) : null,
+            auto.llanta_refaccion != null ? Boolean(auto.llanta_refaccion) : null,
+            auto.gato_cruceta != null ? Boolean(auto.gato_cruceta) : null,
+            auto.tarjeta_circulacion != null ? Boolean(auto.tarjeta_circulacion) : null,
+            auto.domicilio || null, auto.codigo_postal || null,
+            JSON.stringify(encryptArr(auto.foto_condiciones || [])),
+            encrypt(auto.foto_licencia) || null,
+            encrypt(auto.foto_licencia_reverso) || null,
+            encrypt(auto.foto_tarjeta_circulacion) || null,
+            encrypt(auto.foto_poliza_seguro) || null,
+            encrypt(auto.foto_llanta_refaccion) || null,
+            JSON.stringify(auto.danos || []),
+            encrypt(auto.firma_empleado) || null,
+            encrypt(auto.firma_auditor) || null,
+            req.params.id,
+          ]
+        );
+      } else {
+        await client.query(
+          `UPDATE revision_auto SET
+             placas=COALESCE($1,placas), no_serie=COALESCE($2,no_serie), no_modelo=COALESCE($3,no_modelo),
+             kilometraje=COALESCE($4,kilometraje), comentarios=$5
+           WHERE revision_id=$6`,
+          [auto.placas || null, auto.no_serie || null, auto.no_modelo || null,
+           auto.kilometraje || null, auto.comentarios || null, req.params.id]
+        );
+      }
     }
+
     if (equipo) {
-      await pool.query(
-        `UPDATE revision_equipo SET
-           codigo_barras=COALESCE($1,codigo_barras), marca=COALESCE($2,marca),
-           modelo=COALESCE($3,modelo), serie=COALESCE($4,serie), comentarios=$5
-         WHERE revision_id=$6`,
-        [equipo.codigo_barras || null, equipo.marca || null, equipo.modelo || null,
-         equipo.serie || null, equipo.comentarios || null, req.params.id]
-      );
+      if (completar) {
+        await client.query(
+          `UPDATE revision_equipo SET
+             codigo_barras=COALESCE($1,codigo_barras), marca=COALESCE($2,marca),
+             modelo=COALESCE($3,modelo), serie=COALESCE($4,serie), comentarios=$5,
+             foto_equipo=$6, danos=$7, firma_empleado=$8, firma_auditor=$9
+           WHERE revision_id=$10`,
+          [
+            equipo.codigo_barras || null, equipo.marca || null,
+            equipo.modelo || null, equipo.serie || null, equipo.comentarios || null,
+            encrypt(equipo.foto_equipo) || null,
+            JSON.stringify(equipo.danos || []),
+            encrypt(equipo.firma_empleado) || null,
+            encrypt(equipo.firma_auditor) || null,
+            req.params.id,
+          ]
+        );
+      } else {
+        await client.query(
+          `UPDATE revision_equipo SET
+             codigo_barras=COALESCE($1,codigo_barras), marca=COALESCE($2,marca),
+             modelo=COALESCE($3,modelo), serie=COALESCE($4,serie), comentarios=$5
+           WHERE revision_id=$6`,
+          [equipo.codigo_barras || null, equipo.marca || null, equipo.modelo || null,
+           equipo.serie || null, equipo.comentarios || null, req.params.id]
+        );
+      }
     }
+
+    await client.query('COMMIT');
     res.json({ ok: true });
-  } catch { res.status(500).json({ error: 'Error interno del servidor' }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('PATCH /revisiones/:id:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally { client.release(); }
 });
 
 // Eliminar revisión — solo admin (cascade borra revision_auto y revision_equipo)
