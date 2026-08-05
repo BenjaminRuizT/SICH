@@ -196,8 +196,11 @@ export default function NuevaRevision() {
     api.get('/usuarios/me/firma').then(r => {
       if (r.data.firma) {
         setAuditorFirma(r.data.firma);
-        setAutoForm(f => ({ ...f, firma_auditor: r.data.firma }));
-        setEquipoForm(f => ({ ...f, firma_auditor: r.data.firma }));
+        // En modo completar, preservar la firma original del auditor de la revisión
+        if (!location.state?.completarRevision) {
+          setAutoForm(f => ({ ...f, firma_auditor: r.data.firma }));
+          setEquipoForm(f => ({ ...f, firma_auditor: r.data.firma }));
+        }
       }
     }).catch(() => {});
   }, []);
