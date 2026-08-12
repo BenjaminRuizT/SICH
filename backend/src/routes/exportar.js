@@ -23,14 +23,19 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
               ra.placas, ra.no_serie, ra.kilometraje, ra.poliza_seguro,
               ra.licencia_numero, ra.llanta_refaccion, ra.comentarios as comentarios_auto,
               ra.danos as danos_auto,
+              ra.codigo_barras as cb_auto,
+              COALESCE(NULLIF(ra.herramienta_snapshot->>'no_activo', ''), ha.no_activo) as no_activo_auto,
               re.codigo_barras as cb_equipo, re.marca as marca_equipo,
               re.modelo as modelo_equipo, re.serie as serie_equipo,
               re.comentarios as comentarios_equipo,
-              re.danos as danos_equipo
+              re.danos as danos_equipo,
+              COALESCE(NULLIF(re.herramienta_snapshot->>'no_activo', ''), he.no_activo) as no_activo_equipo
              FROM revisiones r
              LEFT JOIN empleados e ON r.empleado_id=e.id
              LEFT JOIN revision_auto ra ON ra.revision_id=r.id
              LEFT JOIN revision_equipo re ON re.revision_id=r.id
+             LEFT JOIN herramientas ha ON ha.id = ra.herramienta_id
+             LEFT JOIN herramientas he ON he.id = re.herramienta_id
              WHERE 1=1`;
     const params = [];
     if (desde) { params.push(desde); q += ` AND r.fecha_revision>=$${params.length}`; }
@@ -51,6 +56,8 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
       { header: 'Plaza', key: 'plaza', width: 15 },
       { header: 'Auto Revisado', key: 'tiene_auto', width: 14 },
       { header: 'Placas', key: 'placas', width: 12 },
+      { header: 'CB Auto', key: 'cb_auto', width: 15 },
+      { header: 'No. Activo Auto', key: 'no_activo_auto', width: 16 },
       { header: 'No. Serie Auto', key: 'no_serie', width: 20 },
       { header: 'Kilometraje', key: 'kilometraje', width: 12 },
       { header: 'Póliza Seguro', key: 'poliza_seguro', width: 15 },
@@ -60,6 +67,7 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
       { header: 'Daños Auto', key: 'danos_auto_desc', width: 40 },
       { header: 'Equipo Revisado', key: 'tiene_equipo', width: 15 },
       { header: 'CB Equipo', key: 'cb_equipo', width: 15 },
+      { header: 'No. Activo Equipo', key: 'no_activo_equipo', width: 18 },
       { header: 'Marca Equipo', key: 'marca_equipo', width: 15 },
       { header: 'Modelo Equipo', key: 'modelo_equipo', width: 15 },
       { header: 'Serie Equipo', key: 'serie_equipo', width: 20 },
@@ -92,9 +100,13 @@ router.get('/revisiones', requireExportOrAdmin, async (req, res) => {
         departamento:     safe(r.departamento),
         plaza:            safe(r.plaza),
         placas:           safe(r.placas),
+        cb_auto:          safe(r.cb_auto),
+        no_activo_auto:   safe(r.no_activo_auto),
         no_serie:         safe(r.no_serie),
         comentarios_auto: safe(r.comentarios_auto),
         danos_auto_desc:  parseDanos(r.danos_auto),
+        cb_equipo:        safe(r.cb_equipo),
+        no_activo_equipo: safe(r.no_activo_equipo),
         marca_equipo:     safe(r.marca_equipo),
         modelo_equipo:    safe(r.modelo_equipo),
         serie_equipo:     safe(r.serie_equipo),
